@@ -154,7 +154,7 @@ export const listProjectsWithStats = createServerFn({ method: "GET" })
 
 export const getProjectStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const sb = context.supabase;
     const { from, to } = monthBounds();
@@ -245,7 +245,7 @@ export const listWorkersWithStats = createServerFn({ method: "GET" })
 
 export const getWorkerDetailStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { worker_id: string; year?: number; month?: number }) =>
+  .inputValidator((d: { worker_id: string; year?: number; month?: number }) =>
     z.object({
       worker_id: z.string().uuid(),
       year: z.number().int().optional(),
@@ -307,7 +307,7 @@ export const getWorkerDetailStats = createServerFn({ method: "GET" })
 /* --------------------------------- ATTENDANCE --------------------------------- */
 export const getProjectAssignedWorkers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { project_id: string }) => z.object({ project_id: z.string().uuid() }).parse(d))
+  .inputValidator((d: { project_id: string }) => z.object({ project_id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const { data: rows, error } = await context.supabase
       .from("project_workers")
@@ -322,7 +322,7 @@ export const getProjectAssignedWorkers = createServerFn({ method: "GET" })
 
 export const getAttendanceForProjectDay = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { project_id: string; date: string }) =>
+  .inputValidator((d: { project_id: string; date: string }) =>
     z.object({ project_id: z.string().uuid(), date: z.string().min(8) }).parse(d),
   )
   .handler(async ({ context, data }) => {
@@ -338,7 +338,7 @@ export const getAttendanceForProjectDay = createServerFn({ method: "GET" })
 /* --------------------------------- REPORTS (calendar matrix) --------------------------------- */
 export const getAttendanceMatrix = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { year: number; month: number; project_id?: string | null }) =>
+  .inputValidator((d: { year: number; month: number; project_id?: string | null }) =>
     z.object({
       year: z.number().int(),
       month: z.number().int().min(1).max(12),

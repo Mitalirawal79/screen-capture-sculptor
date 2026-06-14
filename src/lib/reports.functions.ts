@@ -77,7 +77,7 @@ function applyBorders(row: any, colCount: number) {
    ═══════════════════════════════════════════════════════════════ */
 export const generateMonthlyReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
+  .inputValidator((d: unknown) =>
     z
       .object({
         year: z.number().int().min(2000).max(2100),
