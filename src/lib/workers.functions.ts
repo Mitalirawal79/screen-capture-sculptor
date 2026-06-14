@@ -25,7 +25,7 @@ export const listWorkers = createServerFn({ method: "GET" })
 
 export const getWorker = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const { data: worker, error } = await context.supabase
       .from("workers")
@@ -39,7 +39,7 @@ export const getWorker = createServerFn({ method: "GET" })
 
 export const createWorker = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => workerInput.parse(d))
+  .inputValidator((d: unknown) => workerInput.parse(d))
   .handler(async ({ context, data }) => {
     const { data: row, error } = await context.supabase
       .from("workers")
@@ -60,7 +60,7 @@ export const createWorker = createServerFn({ method: "POST" })
 
 export const updateWorker = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
+  .inputValidator((d: unknown) =>
     workerInput.partial().extend({ id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ context, data }) => {
@@ -86,7 +86,7 @@ export const updateWorker = createServerFn({ method: "POST" })
 
 export const deleteWorker = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const { data: w } = await context.supabase
       .from("workers").select("full_name").eq("id", data.id).maybeSingle();

@@ -27,7 +27,7 @@ export const listProjects = createServerFn({ method: "GET" })
 
 export const getProject = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const sb = context.supabase;
     const [pRes, aRes, uRes, qRes, lRes] = await Promise.all([
@@ -56,7 +56,7 @@ export const getProject = createServerFn({ method: "GET" })
 
 export const createProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => projectInput.parse(d))
+  .inputValidator((d: unknown) => projectInput.parse(d))
   .handler(async ({ context, data }) => {
     const { data: row, error } = await context.supabase
       .from("projects")
@@ -69,7 +69,7 @@ export const createProject = createServerFn({ method: "POST" })
 
 export const updateProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
+  .inputValidator((d: unknown) =>
     projectInput.partial().extend({ id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ context, data }) => {
@@ -81,7 +81,7 @@ export const updateProject = createServerFn({ method: "POST" })
 
 export const deleteProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const { error } = await context.supabase.from("projects").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -90,7 +90,7 @@ export const deleteProject = createServerFn({ method: "POST" })
 
 export const assignWorker = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
+  .inputValidator((d: unknown) =>
     z
       .object({ project_id: z.string().uuid(), worker_id: z.string().uuid() })
       .parse(d),
@@ -105,7 +105,7 @@ export const assignWorker = createServerFn({ method: "POST" })
 
 export const unassignWorker = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
+  .inputValidator((d: unknown) =>
     z
       .object({ project_id: z.string().uuid(), worker_id: z.string().uuid() })
       .parse(d),
@@ -122,7 +122,7 @@ export const unassignWorker = createServerFn({ method: "POST" })
 
 export const addProjectUpdate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
+  .inputValidator((d: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
@@ -151,7 +151,7 @@ export const addProjectUpdate = createServerFn({ method: "POST" })
 
 export const getSignedFileUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => z.object({ file_path: z.string().min(1) }).parse(d))
+  .inputValidator((d: unknown) => z.object({ file_path: z.string().min(1) }).parse(d))
   .handler(async ({ context, data }) => {
     const { data: signed, error } = await context.supabase.storage
       .from("project-files")

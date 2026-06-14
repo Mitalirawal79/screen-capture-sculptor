@@ -6,7 +6,7 @@ const typeEnum = z.enum(["absent", "half", "full", "overtime"]);
 
 export const getAttendanceForDay = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { date: string }) => z.object({ date: z.string().min(8) }).parse(d))
+  .inputValidator((d: { date: string }) => z.object({ date: z.string().min(8) }).parse(d))
   .handler(async ({ context, data }) => {
     const { data: rows, error } = await context.supabase
       .from("attendance")
@@ -18,7 +18,7 @@ export const getAttendanceForDay = createServerFn({ method: "GET" })
 
 export const upsertAttendance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
+  .inputValidator((d: unknown) =>
     z
       .object({
         worker_id: z.string().uuid(),
@@ -47,7 +47,7 @@ export const upsertAttendance = createServerFn({ method: "POST" })
 
 export const bulkUpsertAttendance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
+  .inputValidator((d: unknown) =>
     z
       .object({
         date: z.string().min(8),
@@ -78,7 +78,7 @@ export const bulkUpsertAttendance = createServerFn({ method: "POST" })
 
 export const clearAttendance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
+  .inputValidator((d: unknown) =>
     z.object({ worker_id: z.string().uuid(), date: z.string().min(8) }).parse(d),
   )
   .handler(async ({ context, data }) => {
@@ -93,7 +93,7 @@ export const clearAttendance = createServerFn({ method: "POST" })
 
 export const getWorkerAttendance = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { worker_id: string; from: string; to: string }) =>
+  .inputValidator((d: { worker_id: string; from: string; to: string }) =>
     z
       .object({
         worker_id: z.string().uuid(),

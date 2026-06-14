@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const listQuotations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
+  .inputValidator((d: unknown) =>
     z.object({ project_id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ context, data }) => {
@@ -19,7 +19,7 @@ export const listQuotations = createServerFn({ method: "GET" })
 
 export const recordQuotation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
+  .inputValidator((d: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
@@ -86,7 +86,7 @@ export const recordQuotation = createServerFn({ method: "POST" })
 
 export const deleteQuotation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
+  .inputValidator((d: unknown) =>
     z.object({ id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ context, data }) => {
@@ -131,7 +131,7 @@ export const deleteQuotation = createServerFn({ method: "POST" })
 
 export const getQuotationUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
+  .inputValidator((d: unknown) =>
     z.object({ file_path: z.string().min(1) }).parse(d),
   )
   .handler(async ({ context, data }) => {

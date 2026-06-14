@@ -5,7 +5,7 @@ import { wageFor, type AttendanceType } from "./wages";
 
 export const getWorkerSummary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { worker_id: string }) =>
+  .inputValidator((d: { worker_id: string }) =>
     z.object({ worker_id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ context, data }) => {
