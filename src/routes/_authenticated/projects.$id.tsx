@@ -73,6 +73,11 @@ function ProjectPage() {
   const { data } = useQuery({ queryKey: ["project", id], queryFn: () => getFn({ data: { id } }) });
   const { data: workers = [] } = useQuery({ queryKey: ["workers"], queryFn: () => workersFn() });
   const { data: stats } = useQuery({ queryKey: ["project-stats", id], queryFn: () => statsFn({ data: { id } }) });
+  const areaCostsFn = useServerFn(getProjectWorkAreaCosts);
+  const { data: areaCosts = [] } = useQuery({
+    queryKey: ["project-area-costs", id],
+    queryFn: () => areaCostsFn({ data: { project_id: id } }),
+  });
 
   const [reportBusy, setReportBusy] = useState(false);
 
