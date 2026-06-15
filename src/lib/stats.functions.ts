@@ -293,6 +293,7 @@ export const getWorkerDetailStats = createServerFn({ method: "GET" })
       worker: wRes.data,
       period: { year, month, from, to },
       assignments: (assignRes.data ?? []) as any[],
+      timeline: att as any[],
       counts,
       presentDays,
       monthEarnings: Math.round(earnings),
