@@ -99,7 +99,9 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
     queryKey: ["attendance", projectId, date],
     queryFn: () => dayFn({ data: { project_id: projectId, date } }),
   });
-  const byWorker = new Map(dayRows.map((r) => [r.worker_id, r.type as AttendanceType]));
+  const byWorker = new Map(
+    dayRows.map((r) => [r.worker_id, { type: r.type as AttendanceType, work_area: (r as any).work_area as string | null }]),
+  );
 
   // Yesterday's reference
   const selectedDate = new Date(date + "T00:00:00");
@@ -109,9 +111,12 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
     queryKey: ["attendance", projectId, yesterdayStr],
     queryFn: () => dayFn({ data: { project_id: projectId, date: yesterdayStr } }),
   });
-  const yesterdayByWorker = new Map(yesterdayRows.map((r) => [r.worker_id, r.type as AttendanceType]));
+  const yesterdayByWorker = new Map(
+    yesterdayRows.map((r) => [r.worker_id, { type: r.type as AttendanceType, work_area: (r as any).work_area as string | null }]),
+  );
 
-  // Unassigned workers handling
+  const [bulkArea, setBulkArea] = useState<string>("");
+
   const { data: allWorkersWithStats = [] } = useQuery({
     queryKey: ["workers", "stats"],
     queryFn: () => listAllWorkersWithStatsFn(),
@@ -121,12 +126,14 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
   );
 
   const mark = useMutation({
-    mutationFn: (vars: { worker_id: string; type: AttendanceType }) =>
+    mutationFn: (vars: { worker_id: string; type: AttendanceType; work_area?: string | null }) =>
       upsertFn({ data: { ...vars, date, project_id: projectId } }),
-    onMutate: async ({ worker_id, type }) => {
+    onMutate: async ({ worker_id, type, work_area }) => {
       await qc.cancelQueries({ queryKey: ["attendance", projectId, date] });
       const prev = qc.getQueryData<any[]>(["attendance", projectId, date]) ?? [];
-      const next = [...prev.filter((r) => r.worker_id !== worker_id), { worker_id, type }];
+      const existing = prev.find((r) => r.worker_id === worker_id);
+      const nextArea = work_area !== undefined ? work_area : existing?.work_area ?? null;
+      const next = [...prev.filter((r) => r.worker_id !== worker_id), { worker_id, type, work_area: nextArea }];
       qc.setQueryData(["attendance", projectId, date], next);
       return { prev };
     },
@@ -137,6 +144,7 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       qc.invalidateQueries({ queryKey: ["projects", "stats"] });
+      qc.invalidateQueries({ queryKey: ["work-areas", projectId] });
     },
   });
 
@@ -146,13 +154,22 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
         data: {
           date,
           project_id: projectId,
-          workers: workers.map((w: any) => ({ worker_id: w.id, type: "full" as AttendanceType })),
+          work_area: bulkArea || null,
+          workers: workers.map((w: any) => {
+            const cur = byWorker.get(w.id);
+            return {
+              worker_id: w.id,
+              type: "full" as AttendanceType,
+              work_area: (cur?.work_area ?? bulkArea) || null,
+            };
+          }),
         },
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["attendance", projectId, date] });
       qc.invalidateQueries({ queryKey: ["projects", "stats"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["work-areas", projectId] });
       toast.success("Marked all as Full Day");
     },
     onError: (e: any) => toast.error(e.message || "Couldn't save bulk attendance"),
