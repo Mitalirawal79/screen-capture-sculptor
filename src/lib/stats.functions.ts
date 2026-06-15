@@ -261,7 +261,7 @@ export const getWorkerDetailStats = createServerFn({ method: "GET" })
 
     const [wRes, attRes, payRes, assignRes, lifetimeAttRes, lifetimePayRes] = await Promise.all([
       sb.from("workers").select("*").eq("id", data.worker_id).maybeSingle(),
-      sb.from("attendance").select("type, date, project_id").eq("worker_id", data.worker_id).gte("date", from).lte("date", to),
+      sb.from("attendance").select("type, date, project_id, work_area, projects(name)").eq("worker_id", data.worker_id).gte("date", from).lte("date", to).order("date", { ascending: false }),
       sb.from("payments").select("amount, paid_on, note").eq("worker_id", data.worker_id).gte("paid_on", from).lte("paid_on", to),
       sb.from("project_workers").select("project_id, assigned_at, projects(id, name)").eq("worker_id", data.worker_id),
       sb.from("attendance").select("type").eq("worker_id", data.worker_id),
@@ -293,6 +293,7 @@ export const getWorkerDetailStats = createServerFn({ method: "GET" })
       worker: wRes.data,
       period: { year, month, from, to },
       assignments: (assignRes.data ?? []) as any[],
+      timeline: att as any[],
       counts,
       presentDays,
       monthEarnings: Math.round(earnings),
@@ -328,7 +329,7 @@ export const getAttendanceForProjectDay = createServerFn({ method: "GET" })
   .handler(async ({ context, data }) => {
     const { data: rows, error } = await context.supabase
       .from("attendance")
-      .select("worker_id, type")
+      .select("worker_id, type, work_area")
       .eq("project_id", data.project_id)
       .eq("date", data.date);
     if (error) throw new Error(error.message);

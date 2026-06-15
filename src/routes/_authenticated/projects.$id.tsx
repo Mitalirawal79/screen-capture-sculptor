@@ -31,6 +31,7 @@ import {
 } from "@/lib/projects.functions";
 import { listWorkers } from "@/lib/workers.functions";
 import { getProjectStats } from "@/lib/stats.functions";
+import { getProjectWorkAreaCosts } from "@/lib/attendance.functions";
 import { generateMonthlyReport } from "@/lib/reports.functions";
 import { recordQuotation, deleteQuotation } from "@/lib/quotations.functions";
 import { uploadProjectFile } from "@/lib/upload";
@@ -72,6 +73,11 @@ function ProjectPage() {
   const { data } = useQuery({ queryKey: ["project", id], queryFn: () => getFn({ data: { id } }) });
   const { data: workers = [] } = useQuery({ queryKey: ["workers"], queryFn: () => workersFn() });
   const { data: stats } = useQuery({ queryKey: ["project-stats", id], queryFn: () => statsFn({ data: { id } }) });
+  const areaCostsFn = useServerFn(getProjectWorkAreaCosts);
+  const { data: areaCosts = [] } = useQuery({
+    queryKey: ["project-area-costs", id],
+    queryFn: () => areaCostsFn({ data: { project_id: id } }),
+  });
 
   const [reportBusy, setReportBusy] = useState(false);
 
@@ -410,6 +416,26 @@ function ProjectPage() {
           </Card>
         </section>
       )}
+
+      {areaCosts.length > 0 && (
+        <section>
+          <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-2 px-0.5">
+            Labour Cost by Work Area
+          </h2>
+          <Card className="divide-y">
+            {areaCosts.map((r: any) => (
+              <div key={r.area} className="p-3 flex items-center justify-between text-sm">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{r.area}</p>
+                  <p className="text-xs text-muted-foreground">{r.days} day{r.days === 1 ? "" : "s"} worked</p>
+                </div>
+                <span className="font-semibold tabular-nums text-primary">{formatCurrency(r.cost)}</span>
+              </div>
+            ))}
+          </Card>
+        </section>
+      )}
+
 
       {/* ── QUOTATION ─────────────────────────────────────────── */}
       <QuotationsSection projectId={id} quotations={quotations} currentQuote={currentQuote} />
