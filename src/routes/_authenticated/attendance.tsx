@@ -82,9 +82,14 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
   const projectsFn = useServerFn(listProjectsWithStats);
   const listAllWorkersWithStatsFn = useServerFn(listWorkersWithStats);
   const assignFn = useServerFn(assignWorker);
+  const areasFn = useServerFn(listProjectWorkAreas);
 
   const { data: projects = [] } = useQuery({ queryKey: ["projects", "stats"], queryFn: () => projectsFn() });
   const project = projects.find((p) => p.id === projectId);
+  const { data: recentAreas = [] } = useQuery({
+    queryKey: ["work-areas", projectId],
+    queryFn: () => areasFn({ data: { project_id: projectId } }),
+  });
 
   const { data: workers = [] } = useQuery({
     queryKey: ["project-workers", projectId],
