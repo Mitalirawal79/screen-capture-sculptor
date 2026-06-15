@@ -328,7 +328,7 @@ export const getAttendanceForProjectDay = createServerFn({ method: "GET" })
   .handler(async ({ context, data }) => {
     const { data: rows, error } = await context.supabase
       .from("attendance")
-      .select("worker_id, type")
+      .select("worker_id, type, work_area")
       .eq("project_id", data.project_id)
       .eq("date", data.date);
     if (error) throw new Error(error.message);
