@@ -323,3 +323,179 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
     </div>
   );
 }
+
+const DEFAULT_AREAS = ["Bedroom", "Hall", "Kitchen", "Bath", "Plumbing", "Electrical"];
+
+function mergeAreas(recent: string[]) {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const a of [...recent, ...DEFAULT_AREAS]) {
+    const v = (a || "").trim();
+    if (!v) continue;
+    const key = v.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(v);
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
+function WorkAreaBulkRow({
+  value,
+  onChange,
+  recent,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  recent: string[];
+}) {
+  const areas = mergeAreas(recent);
+  return (
+    <Card className="p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <MapPin className="size-3.5 text-primary" />
+        <p className="text-xs font-medium">Default work area for the day</p>
+        {value && (
+          <button
+            className="ml-auto text-[10px] text-muted-foreground hover:text-foreground"
+            onClick={() => onChange("")}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {areas.map((a) => (
+          <button
+            key={a}
+            onClick={() => onChange(a)}
+            className={`text-xs px-2 py-1 rounded-full border transition-colors ${
+              value === a
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background hover:bg-accent border-border"
+            }`}
+          >
+            {a}
+          </button>
+        ))}
+        <CustomAreaInput
+          onAdd={(v) => onChange(v)}
+          trigger={
+            <button className="text-xs px-2 py-1 rounded-full border border-dashed border-border hover:bg-accent text-muted-foreground inline-flex items-center gap-1">
+              <Plus className="size-3" /> Custom
+            </button>
+          }
+        />
+      </div>
+    </Card>
+  );
+}
+
+function WorkAreaPicker({
+  value,
+  recent,
+  onChange,
+}: {
+  value: string;
+  recent: string[];
+  onChange: (v: string) => void;
+}) {
+  const areas = mergeAreas(recent);
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          className={`shrink-0 text-[11px] px-2 py-1 rounded-md border inline-flex items-center gap-1 max-w-[140px] truncate ${
+            value
+              ? "bg-accent/60 border-border text-foreground"
+              : "border-dashed border-border text-muted-foreground hover:bg-accent"
+          }`}
+        >
+          <MapPin className="size-3 shrink-0" />
+          <span className="truncate">{value || "Set area"}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-64 p-3 space-y-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Work area</p>
+        <div className="flex flex-wrap gap-1.5">
+          {areas.map((a) => (
+            <button
+              key={a}
+              onClick={() => onChange(a)}
+              className={`text-xs px-2 py-1 rounded-full border transition-colors ${
+                value === a
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background hover:bg-accent border-border"
+              }`}
+            >
+              {a}
+            </button>
+          ))}
+        </div>
+        <CustomAreaInput
+          onAdd={(v) => onChange(v)}
+          trigger={
+            <button className="text-xs w-full px-2 py-1.5 rounded-md border border-dashed border-border hover:bg-accent text-muted-foreground inline-flex items-center justify-center gap-1">
+              <Plus className="size-3" /> Add custom area
+            </button>
+          }
+        />
+        {value && (
+          <button
+            onClick={() => onChange("")}
+            className="text-xs w-full px-2 py-1.5 rounded-md hover:bg-accent text-muted-foreground"
+          >
+            Clear area
+          </button>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function CustomAreaInput({
+  onAdd,
+  trigger,
+}: {
+  onAdd: (v: string) => void;
+  trigger: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState("");
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      <PopoverContent align="end" className="w-56 p-2">
+        <div className="flex gap-1.5">
+          <Input
+            autoFocus
+            value={val}
+            onChange={(e) => setVal(e.target.value)}
+            placeholder="e.g. Interior, 2F"
+            className="h-8 text-xs"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && val.trim()) {
+                onAdd(val.trim());
+                setVal("");
+                setOpen(false);
+              }
+            }}
+          />
+          <Button
+            size="sm"
+            className="h-8 px-2 text-xs"
+            onClick={() => {
+              if (!val.trim()) return;
+              onAdd(val.trim());
+              setVal("");
+              setOpen(false);
+            }}
+          >
+            Add
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
