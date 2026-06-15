@@ -72,7 +72,7 @@ export const bulkUpsertAttendance = createServerFn({ method: "POST" })
     }));
     const { error } = await context.supabase
       .from("attendance")
-      .upsert(rows, { onConflict: "worker_id,date" });
+      .upsert(rows, { onConflict: "worker_id,date,project_id" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
