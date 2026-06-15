@@ -31,6 +31,7 @@ import {
 } from "@/lib/projects.functions";
 import { listWorkers } from "@/lib/workers.functions";
 import { getProjectStats } from "@/lib/stats.functions";
+import { getProjectWorkAreaCosts } from "@/lib/attendance.functions";
 import { generateMonthlyReport } from "@/lib/reports.functions";
 import { recordQuotation, deleteQuotation } from "@/lib/quotations.functions";
 import { uploadProjectFile } from "@/lib/upload";
