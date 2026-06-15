@@ -24,7 +24,7 @@ export const upsertAttendance = createServerFn({ method: "POST" })
         worker_id: z.string().uuid(),
         date: z.string().min(8),
         type: typeEnum,
-        project_id: z.string().uuid().nullable().optional(),
+        project_id: z.string().uuid(),
       })
       .parse(d),
   )
@@ -36,14 +36,15 @@ export const upsertAttendance = createServerFn({ method: "POST" })
           worker_id: data.worker_id,
           date: data.date,
           type: data.type,
-          project_id: data.project_id ?? null,
+          project_id: data.project_id,
           owner_id: context.userId,
         },
-        { onConflict: "worker_id,date" },
+        { onConflict: "worker_id,date,project_id" },
       );
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
 
 export const bulkUpsertAttendance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
