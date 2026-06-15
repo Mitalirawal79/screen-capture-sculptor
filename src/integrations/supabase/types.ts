@@ -69,6 +69,7 @@ export type Database = {
           owner_id: string
           project_id: string | null
           type: Database["public"]["Enums"]["attendance_type"]
+          work_area: string | null
           worker_id: string
         }
         Insert: {
@@ -78,6 +79,7 @@ export type Database = {
           owner_id: string
           project_id?: string | null
           type: Database["public"]["Enums"]["attendance_type"]
+          work_area?: string | null
           worker_id: string
         }
         Update: {
@@ -87,6 +89,7 @@ export type Database = {
           owner_id?: string
           project_id?: string | null
           type?: Database["public"]["Enums"]["attendance_type"]
+          work_area?: string | null
           worker_id?: string
         }
         Relationships: [
