@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { listProjectsWithStats, getProjectAssignedWorkers, getAttendanceForProjectDay, getAttendanceMatrix, listWorkersWithStats } from "@/lib/stats.functions";
-import { upsertAttendance, bulkUpsertAttendance } from "@/lib/attendance.functions";
+import { upsertAttendance, bulkUpsertAttendance, listProjectWorkAreas } from "@/lib/attendance.functions";
 import { assignWorker } from "@/lib/projects.functions";
 import { ATTENDANCE_LABEL, type AttendanceType } from "@/lib/wages";
 import { toast } from "sonner";
-import { Calendar, ArrowLeft, HardHat, ChevronRight, UserPlus, Sparkles } from "lucide-react";
+import { Calendar, ArrowLeft, HardHat, ChevronRight, UserPlus, Sparkles, MapPin, Plus } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 export const Route = createFileRoute("/_authenticated/attendance")({
   component: AttendancePage,
