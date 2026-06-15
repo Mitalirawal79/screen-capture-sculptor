@@ -215,6 +215,12 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
         </Card>
       ) : (
         <div className="space-y-3">
+          <WorkAreaBulkRow
+            value={bulkArea}
+            onChange={setBulkArea}
+            recent={recentAreas}
+          />
+
           <Button
             variant="outline"
             className="w-full gap-2 hover:bg-accent border-primary/20 text-xs font-semibold py-5"
@@ -222,13 +228,14 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
             disabled={markAllFull.isPending || workers.length === 0}
           >
             <Sparkles className="size-3.5 text-primary" />
-            {markAllFull.isPending ? "Saving..." : "Mark All Full Day"}
+            {markAllFull.isPending ? "Saving..." : `Mark All Full Day${bulkArea ? ` · ${bulkArea}` : ""}`}
           </Button>
 
           <div className="space-y-2">
             {workers.map((w: any) => {
               const current = byWorker.get(w.id);
               const yest = yesterdayByWorker.get(w.id);
+              const effectiveArea = current?.work_area ?? bulkArea ?? "";
               return (
                 <Card key={w.id} className="p-3">
                   <div className="flex items-center justify-between mb-2 gap-2">
@@ -238,19 +245,36 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
                         <span>{w.worker_type || "Worker"}</span>
                         {yest && (
                           <span className="text-[10px] text-muted-foreground/85 bg-accent/60 px-1 py-0.2 rounded font-normal tabular-nums">
-                            Yesterday: {ATTENDANCE_LABEL[yest]}
+                            Yesterday: {ATTENDANCE_LABEL[yest.type]}{yest.work_area ? ` · ${yest.work_area}` : ""}
                           </span>
                         )}
                       </p>
                     </div>
+                    <WorkAreaPicker
+                      value={effectiveArea}
+                      recent={recentAreas}
+                      onChange={(area) =>
+                        mark.mutate({
+                          worker_id: w.id,
+                          type: current?.type ?? "full",
+                          work_area: area || null,
+                        })
+                      }
+                    />
                   </div>
                   <div className="grid grid-cols-4 gap-1.5">
                     {TYPES.map((t) => (
                       <button
                         key={t}
-                        onClick={() => mark.mutate({ worker_id: w.id, type: t })}
+                        onClick={() =>
+                          mark.mutate({
+                            worker_id: w.id,
+                            type: t,
+                            work_area: current?.work_area ?? bulkArea ?? null,
+                          })
+                        }
                         className={`tap-target rounded-md text-xs font-medium px-1 py-2 border transition-colors ${
-                          current === t
+                          current?.type === t
                             ? "bg-primary text-primary-foreground border-primary"
                             : "bg-background hover:bg-accent border-border"
                         }`}
