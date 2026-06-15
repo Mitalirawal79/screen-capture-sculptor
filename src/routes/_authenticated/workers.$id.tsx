@@ -147,6 +147,27 @@ function WorkerPage() {
         </div>
       </section>
 
+      {stats.timeline && stats.timeline.length > 0 && (
+        <section>
+          <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Work timeline</h3>
+          <Card className="divide-y max-h-96 overflow-auto">
+            {stats.timeline.map((t: any, i: number) => (
+              <div key={i} className="p-3 flex items-center justify-between text-sm gap-2">
+                <div className="min-w-0">
+                  <p className="font-medium tabular-nums">{formatLedgerDate(t.date)}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {t.projects?.name ?? "—"}{t.work_area ? ` · ${t.work_area}` : ""}
+                  </p>
+                </div>
+                <Badge variant={t.type === "absent" ? "secondary" : "default"} className="capitalize shrink-0">
+                  {t.type}
+                </Badge>
+              </div>
+            ))}
+          </Card>
+        </section>
+      )}
+
       <section>
         <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Financial summary</h3>
         <div className="grid grid-cols-2 gap-3">
