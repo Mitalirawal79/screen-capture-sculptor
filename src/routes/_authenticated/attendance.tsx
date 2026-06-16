@@ -92,8 +92,8 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
   });
 
   const { data: workers = [] } = useQuery({
-    queryKey: ["project-workers", projectId],
-    queryFn: () => workersFn({ data: { project_id: projectId } }),
+    queryKey: ["project-workers", projectId, date],
+    queryFn: () => workersFn({ data: { project_id: projectId, date } }),
   });
   const { data: dayRows = [] } = useQuery({
     queryKey: ["attendance", projectId, date],
@@ -121,9 +121,11 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
     queryKey: ["workers", "stats"],
     queryFn: () => listAllWorkersWithStatsFn(),
   });
-  const unassignedWorkers = allWorkersWithStats.filter(
-    (w: any) => (!w.assignedProjects || w.assignedProjects.length === 0) && w.status === "active"
+  const workerIdsOnSite = new Set(workers.map((w: any) => w.id));
+  const addableWorkers = allWorkersWithStats.filter(
+    (w: any) => w.status === "active" && !workerIdsOnSite.has(w.id),
   );
+
 
   const mark = useMutation({
     mutationFn: (vars: { worker_id: string; type: AttendanceType; work_area?: string | null }) =>
