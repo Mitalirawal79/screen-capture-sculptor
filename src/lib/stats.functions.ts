@@ -308,18 +308,38 @@ export const getWorkerDetailStats = createServerFn({ method: "GET" })
 /* --------------------------------- ATTENDANCE --------------------------------- */
 export const getProjectAssignedWorkers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { project_id: string }) => z.object({ project_id: z.string().uuid() }).parse(d))
+  .inputValidator((d: { project_id: string; date?: string }) =>
+    z.object({ project_id: z.string().uuid(), date: z.string().min(8).optional() }).parse(d),
+  )
   .handler(async ({ context, data }) => {
-    const { data: rows, error } = await context.supabase
-      .from("project_workers")
-      .select("worker_id, workers(id, full_name, worker_type, daily_wage, status)")
-      .eq("project_id", data.project_id);
-    if (error) throw new Error(error.message);
-    return (rows ?? [])
-      .map((r: any) => r.workers)
-      .filter((w: any) => w && w.status === "active")
-      .sort((a: any, b: any) => a.full_name.localeCompare(b.full_name));
+    const sb = context.supabase;
+    // Default team (project_workers) + anyone with attendance on the given date for this project.
+    const [teamRes, dayAttRes] = await Promise.all([
+      sb.from("project_workers")
+        .select("worker_id, workers(id, full_name, worker_type, daily_wage, status)")
+        .eq("project_id", data.project_id),
+      data.date
+        ? sb.from("attendance")
+            .select("worker_id, workers(id, full_name, worker_type, daily_wage, status)")
+            .eq("project_id", data.project_id)
+            .eq("date", data.date)
+        : Promise.resolve({ data: [] as any[], error: null as any }),
+    ]);
+    if ((teamRes as any).error) throw new Error((teamRes as any).error.message);
+    if ((dayAttRes as any).error) throw new Error((dayAttRes as any).error.message);
+
+    const byId = new Map<string, any>();
+    for (const r of (teamRes.data ?? []) as any[]) {
+      if (r.workers && r.workers.status === "active") byId.set(r.workers.id, r.workers);
+    }
+    for (const r of (dayAttRes.data ?? []) as any[]) {
+      if (r.workers && r.workers.status === "active" && !byId.has(r.workers.id)) {
+        byId.set(r.workers.id, r.workers);
+      }
+    }
+    return [...byId.values()].sort((a: any, b: any) => a.full_name.localeCompare(b.full_name));
   });
+
 
 export const getAttendanceForProjectDay = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
