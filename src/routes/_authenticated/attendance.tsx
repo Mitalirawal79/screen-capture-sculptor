@@ -92,8 +92,8 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
   });
 
   const { data: workers = [] } = useQuery({
-    queryKey: ["project-workers", projectId],
-    queryFn: () => workersFn({ data: { project_id: projectId } }),
+    queryKey: ["project-workers", projectId, date],
+    queryFn: () => workersFn({ data: { project_id: projectId, date } }),
   });
   const { data: dayRows = [] } = useQuery({
     queryKey: ["attendance", projectId, date],
@@ -121,9 +121,11 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
     queryKey: ["workers", "stats"],
     queryFn: () => listAllWorkersWithStatsFn(),
   });
-  const unassignedWorkers = allWorkersWithStats.filter(
-    (w: any) => (!w.assignedProjects || w.assignedProjects.length === 0) && w.status === "active"
+  const workerIdsOnSite = new Set(workers.map((w: any) => w.id));
+  const addableWorkers = allWorkersWithStats.filter(
+    (w: any) => w.status === "active" && !workerIdsOnSite.has(w.id),
   );
+
 
   const mark = useMutation({
     mutationFn: (vars: { worker_id: string; type: AttendanceType; work_area?: string | null }) =>
@@ -211,7 +213,7 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
 
       {workers.length === 0 ? (
         <Card className="p-6 text-sm text-muted-foreground text-center">
-          No workers assigned to this project. Assign workers from the project page.
+          No workers on this site yet. Add workers from the list below to build today's workforce.
         </Card>
       ) : (
         <div className="space-y-3">
@@ -290,29 +292,41 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
         </div>
       )}
 
-      {unassignedWorkers.length > 0 && (
+      {addableWorkers.length > 0 && (
         <section className="space-y-2 mt-6 border-t pt-4">
           <div className="flex items-center gap-2 mb-2">
             <UserPlus className="size-3.5 text-muted-foreground" />
-            <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Unassigned Workers ({unassignedWorkers.length})</h3>
+            <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+              Add worker to this site ({addableWorkers.length})
+            </h3>
           </div>
+          <p className="text-[11px] text-muted-foreground mb-2">
+            Workers move freely between sites — adding here only logs them on {date}.
+          </p>
           <div className="space-y-2">
-            {unassignedWorkers.map((w: any) => (
+            {addableWorkers.map((w: any) => (
               <Card key={w.id} className="p-3 bg-muted/40 border-dashed">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-medium text-sm truncate">{w.full_name}</p>
-                    <p className="text-xs text-destructive font-medium mt-0.5">This worker is not assigned to any project.</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {w.worker_type || "Worker"}
+                      {w.assignedProjects && w.assignedProjects.length > 0
+                        ? ` · Default: ${w.assignedProjects.join(", ")}`
+                        : " · No default site"}
+                    </p>
                   </div>
                   <Button
                     size="sm"
                     variant="outline"
                     className="shrink-0"
-                    onClick={() => assign.mutate(w.id)}
-                    disabled={assign.isPending}
+                    onClick={() =>
+                      mark.mutate({ worker_id: w.id, type: "full", work_area: bulkArea || null })
+                    }
+                    disabled={mark.isPending}
                   >
-                    <UserPlus className="size-3.5 mr-1" />
-                    Assign
+                    <Plus className="size-3.5 mr-1" />
+                    Add Full Day
                   </Button>
                 </div>
               </Card>
@@ -323,6 +337,7 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
     </div>
   );
 }
+
 
 const DEFAULT_AREAS = ["Bedroom", "Hall", "Kitchen", "Bath", "Plumbing", "Electrical"];
 
