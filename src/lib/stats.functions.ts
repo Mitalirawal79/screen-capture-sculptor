@@ -160,7 +160,7 @@ export const getProjectStats = createServerFn({ method: "GET" })
     const { from, to } = monthBounds();
     const today = new Date().toISOString().slice(0, 10);
 
-    const [assignRes, attRes] = await Promise.all([
+    const [assignRes, attRes, workersRes] = await Promise.all([
       sb.from("project_workers")
         .select("worker_id, workers(id, full_name, worker_type, daily_wage)")
         .eq("project_id", data.id),
@@ -168,25 +168,33 @@ export const getProjectStats = createServerFn({ method: "GET" })
         .select("worker_id, type, date")
         .eq("project_id", data.id)
         .gte("date", from).lte("date", to),
+      sb.from("workers").select("id, full_name, worker_type, daily_wage"),
     ]);
-    for (const r of [assignRes, attRes]) {
+    for (const r of [assignRes, attRes, workersRes]) {
       if ((r as any).error) throw new Error((r as any).error.message);
     }
     const assigns = assignRes.data ?? [];
     const att = attRes.data ?? [];
+    const workerMap = new Map((workersRes.data ?? []).map((w: any) => [w.id, w]));
     const todayAtt = att.filter((a) => a.date === today);
     const presentToday = todayAtt.filter((a) => a.type !== "absent").length;
     const absentToday = Math.max(0, assigns.length - presentToday);
 
-    const breakdown = assigns.map((a: any) => {
-      const wage = Number(a.workers?.daily_wage ?? 0);
-      const wAtt = att.filter((x) => x.worker_id === a.worker_id);
+    // Union of default team + any worker with attendance this month on this project.
+    const workerIds = new Set<string>();
+    for (const a of assigns as any[]) if (a.worker_id) workerIds.add(a.worker_id);
+    for (const a of att) if (a.worker_id) workerIds.add(a.worker_id);
+
+    const breakdown = [...workerIds].map((wid) => {
+      const w: any = workerMap.get(wid) ?? {};
+      const wage = Number(w.daily_wage ?? 0);
+      const wAtt = att.filter((x) => x.worker_id === wid);
       const days = wAtt.filter((x) => x.type !== "absent").length;
       const earnings = wAtt.reduce((s, x) => s + wageFor(x.type as AttendanceType, wage), 0);
       return {
-        worker_id: a.worker_id,
-        name: a.workers?.full_name ?? "—",
-        type: a.workers?.worker_type ?? "",
+        worker_id: wid,
+        name: w.full_name ?? "—",
+        type: w.worker_type ?? "",
         wage,
         days,
         earnings: Math.round(earnings),
@@ -201,6 +209,7 @@ export const getProjectStats = createServerFn({ method: "GET" })
       breakdown: breakdown.sort((a, b) => b.earnings - a.earnings),
     };
   });
+
 
 /* --------------------------------- WORKERS --------------------------------- */
 export const listWorkersWithStats = createServerFn({ method: "GET" })
