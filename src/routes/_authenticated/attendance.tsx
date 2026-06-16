@@ -213,7 +213,7 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
 
       {workers.length === 0 ? (
         <Card className="p-6 text-sm text-muted-foreground text-center">
-          No workers assigned to this project. Assign workers from the project page.
+          No workers on this site yet. Add workers from the list below to build today's workforce.
         </Card>
       ) : (
         <div className="space-y-3">
