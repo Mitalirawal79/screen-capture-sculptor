@@ -9,14 +9,44 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import {
-  ArrowLeft, Plus, Trash2, Milestone, MessageSquare, UserPlus, FileText,
-  Upload, Download, Image as ImageIcon, History, Activity,
-  HardHat, Users, Banknote, CheckCircle2, XCircle, CalendarCheck,
-  ClipboardList, ChevronRight, Phone,
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Milestone,
+  MessageSquare,
+  UserPlus,
+  FileText,
+  Upload,
+  Download,
+  Image as ImageIcon,
+  History,
+  Activity,
+  HardHat,
+  Users,
+  Banknote,
+  CheckCircle2,
+  XCircle,
+  CalendarCheck,
+  ClipboardList,
+  ChevronRight,
+  Phone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatNumber } from "@/lib/format";
@@ -72,7 +102,10 @@ function ProjectPage() {
 
   const { data } = useQuery({ queryKey: ["project", id], queryFn: () => getFn({ data: { id } }) });
   const { data: workers = [] } = useQuery({ queryKey: ["workers"], queryFn: () => workersFn() });
-  const { data: stats } = useQuery({ queryKey: ["project-stats", id], queryFn: () => statsFn({ data: { id } }) });
+  const { data: stats } = useQuery({
+    queryKey: ["project-stats", id],
+    queryFn: () => statsFn({ data: { id } }),
+  });
   const areaCostsFn = useServerFn(getProjectWorkAreaCosts);
   const { data: areaCosts = [] } = useQuery({
     queryKey: ["project-area-costs", id],
@@ -161,7 +194,9 @@ function ProjectPage() {
     <div className="space-y-5 pb-6">
       {/* Back nav */}
       <Button asChild variant="ghost" size="sm" className="-ml-2">
-        <Link to="/projects"><ArrowLeft className="size-4" /> Projects</Link>
+        <Link to="/projects">
+          <ArrowLeft className="size-4" /> Projects
+        </Link>
       </Button>
 
       {/* ── PROJECT HERO ─────────────────────────────────────── */}
@@ -216,7 +251,10 @@ function ProjectPage() {
             <span className="text-xs text-muted-foreground font-medium">Adjust Progress</span>
             <div className="flex items-center gap-2">
               <Label className="text-xs">Status</Label>
-              <Select defaultValue={project.status} onValueChange={(v) => update.mutate({ status: v })}>
+              <Select
+                defaultValue={project.status}
+                onValueChange={(v) => update.mutate({ status: v })}
+              >
                 <SelectTrigger className="h-7 text-xs w-32">
                   <SelectValue />
                 </SelectTrigger>
@@ -349,7 +387,8 @@ function ProjectPage() {
                         </Link>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {a.workers?.worker_type || "Worker"} · {formatCurrency(a.workers?.daily_wage ?? 0)}/day
+                        {a.workers?.worker_type || "Worker"} ·{" "}
+                        {formatCurrency(a.workers?.daily_wage ?? 0)}/day
                       </p>
                       {wb && (
                         <div className="flex items-center gap-3 mt-2 flex-wrap">
@@ -408,9 +447,13 @@ function ProjectPage() {
               <div key={r.worker_id} className="p-3 flex items-center justify-between text-sm">
                 <div className="min-w-0">
                   <p className="font-medium truncate">{r.name}</p>
-                  <p className="text-xs text-muted-foreground">{r.type || "Worker"} · {r.days} days</p>
+                  <p className="text-xs text-muted-foreground">
+                    {r.type || "Worker"} · {r.days} days
+                  </p>
                 </div>
-                <span className="font-semibold tabular-nums text-primary">{formatCurrency(r.earnings)}</span>
+                <span className="font-semibold tabular-nums text-primary">
+                  {formatCurrency(r.earnings)}
+                </span>
               </div>
             ))}
           </Card>
@@ -427,15 +470,18 @@ function ProjectPage() {
               <div key={r.area} className="p-3 flex items-center justify-between text-sm">
                 <div className="min-w-0">
                   <p className="font-medium truncate">{r.area}</p>
-                  <p className="text-xs text-muted-foreground">{r.days} day{r.days === 1 ? "" : "s"} worked</p>
+                  <p className="text-xs text-muted-foreground">
+                    {r.days} day{r.days === 1 ? "" : "s"} worked
+                  </p>
                 </div>
-                <span className="font-semibold tabular-nums text-primary">{formatCurrency(r.cost)}</span>
+                <span className="font-semibold tabular-nums text-primary">
+                  {formatCurrency(r.cost)}
+                </span>
               </div>
             ))}
           </Card>
         </section>
       )}
-
 
       {/* ── QUOTATION ─────────────────────────────────────────── */}
       <QuotationsSection projectId={id} quotations={quotations} currentQuote={currentQuote} />
@@ -530,7 +576,9 @@ function AssignDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Assign worker to project</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Assign worker to project</DialogTitle>
+        </DialogHeader>
         <div className="space-y-1 max-h-80 overflow-y-auto">
           {unassigned.length === 0 && (
             <p className="text-sm text-muted-foreground py-3">
@@ -540,7 +588,10 @@ function AssignDialog({
           {unassigned.map((w) => (
             <button
               key={w.id}
-              onClick={() => { onAssign(w.id); setOpen(false); }}
+              onClick={() => {
+                onAssign(w.id);
+                setOpen(false);
+              }}
               className="w-full text-left p-3 rounded-md hover:bg-accent text-sm tap-target flex items-center justify-between"
             >
               <div>
@@ -617,7 +668,9 @@ function QuotationsSection({
   return (
     <section>
       <div className="flex items-center justify-between mb-2 px-0.5">
-        <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Quotation</h2>
+        <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+          Quotation
+        </h2>
         <div className="flex gap-1">
           {quotations.length > 1 && (
             <Button size="sm" variant="ghost" onClick={() => setHistoryOpen(true)}>
@@ -632,7 +685,10 @@ function QuotationsSection({
             type="file"
             className="hidden"
             accept=".pdf,.xls,.xlsx,.csv,image/*"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleFile(f);
+            }}
           />
         </div>
       </div>
@@ -648,7 +704,8 @@ function QuotationsSection({
               <div className="min-w-0">
                 <p className="font-medium truncate">{currentQuote.file_name}</p>
                 <p className="text-xs text-muted-foreground">
-                  v{currentQuote.version} · Uploaded {new Date(currentQuote.created_at).toLocaleString()}
+                  v{currentQuote.version} · Uploaded{" "}
+                  {new Date(currentQuote.created_at).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -661,21 +718,29 @@ function QuotationsSection({
 
       <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Quotation history</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Quotation history</DialogTitle>
+          </DialogHeader>
           <div className="divide-y max-h-[70vh] overflow-y-auto">
             {quotations.map((q: any) => (
               <div key={q.id} className="py-3 flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">
                     v{q.version} · {q.file_name}{" "}
-                    {q.is_current && <Badge className="ml-1" variant="secondary">Current</Badge>}
+                    {q.is_current && (
+                      <Badge className="ml-1" variant="secondary">
+                        Current
+                      </Badge>
+                    )}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {new Date(q.created_at).toLocaleString()}
                   </p>
                 </div>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="outline" onClick={() => openFile(q.file_path)}>Open</Button>
+                  <Button size="sm" variant="outline" onClick={() => openFile(q.file_path)}>
+                    Open
+                  </Button>
                   <Button
                     size="icon"
                     variant="ghost"
@@ -710,9 +775,11 @@ function UpdateRow({ update }: { update: any }) {
 
   return (
     <div className="p-3 flex items-start gap-3 text-sm">
-      {update.is_milestone
-        ? <Milestone className="size-4 text-primary mt-0.5" />
-        : <MessageSquare className="size-4 text-muted-foreground mt-0.5" />}
+      {update.is_milestone ? (
+        <Milestone className="size-4 text-primary mt-0.5" />
+      ) : (
+        <MessageSquare className="size-4 text-muted-foreground mt-0.5" />
+      )}
       <div className="flex-1 min-w-0">
         <p>{update.note}</p>
         <p className="text-xs text-muted-foreground mt-0.5">
@@ -747,10 +814,14 @@ function NoteDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm"><Plus className="size-4" /> Note</Button>
+        <Button size="sm">
+          <Plus className="size-4" /> Note
+        </Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Add update</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Add update</DialogTitle>
+        </DialogHeader>
         <form
           className="space-y-3"
           onSubmit={async (e) => {
@@ -775,7 +846,12 @@ function NoteDialog({
             }
           }}
         >
-          <Textarea name="note" required rows={3} placeholder="Foundation completed, electrical started…" />
+          <Textarea
+            name="note"
+            required
+            rows={3}
+            placeholder="Foundation completed, electrical started…"
+          />
           <div className="space-y-1.5">
             <Label htmlFor="photo">Site photo (optional)</Label>
             <Input id="photo" name="photo" type="file" accept="image/*" />
@@ -784,7 +860,9 @@ function NoteDialog({
             <input type="checkbox" name="is_milestone" /> Mark as milestone
           </label>
           <DialogFooter>
-            <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Add"}</Button>
+            <Button type="submit" disabled={busy}>
+              {busy ? "Saving…" : "Add"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

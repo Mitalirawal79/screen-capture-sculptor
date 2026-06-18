@@ -4,9 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const listQuotations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ project_id: z.string().uuid() }).parse(d),
-  )
+  .validator((d: unknown) => z.object({ project_id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const { data: rows, error } = await context.supabase
       .from("project_quotations")
@@ -19,7 +17,7 @@ export const listQuotations = createServerFn({ method: "GET" })
 
 export const recordQuotation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
@@ -86,9 +84,7 @@ export const recordQuotation = createServerFn({ method: "POST" })
 
 export const deleteQuotation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ id: z.string().uuid() }).parse(d),
-  )
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const sb = context.supabase;
     const { data: row, error: gErr } = await sb
@@ -131,9 +127,7 @@ export const deleteQuotation = createServerFn({ method: "POST" })
 
 export const getQuotationUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ file_path: z.string().min(1) }).parse(d),
-  )
+  .validator((d: unknown) => z.object({ file_path: z.string().min(1) }).parse(d))
   .handler(async ({ context, data }) => {
     const { data: signed, error } = await context.supabase.storage
       .from("project-files")

@@ -7,8 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getWorkerDetailStats } from "@/lib/stats.functions";
 import { deleteWorker } from "@/lib/workers.functions";
@@ -22,7 +35,7 @@ export const Route = createFileRoute("/_authenticated/workers/$id")({
   component: WorkerPage,
 });
 
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function WorkerPage() {
   const { id } = Route.useParams();
@@ -61,7 +74,9 @@ function WorkerPage() {
   return (
     <div className="space-y-4">
       <Button asChild variant="ghost" size="sm" className="-ml-2">
-        <Link to="/workers"><ArrowLeft className="size-4" /> Workers</Link>
+        <Link to="/workers">
+          <ArrowLeft className="size-4" /> Workers
+        </Link>
       </Button>
 
       <Card className="p-5">
@@ -73,7 +88,12 @@ function WorkerPage() {
             </p>
             <div className="flex gap-2 mt-3 text-xs text-muted-foreground flex-wrap items-center">
               {w.mobile && (
-                <Button variant="outline" size="sm" className="h-8 rounded-full text-xs font-semibold px-3 inline-flex items-center gap-1.5" asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-full text-xs font-semibold px-3 inline-flex items-center gap-1.5"
+                  asChild
+                >
                   <a href={`tel:${w.mobile}`}>
                     <Phone className="size-3.5 text-primary" />
                     Call Worker
@@ -86,7 +106,12 @@ function WorkerPage() {
           </div>
           <div className="flex gap-1">
             <EditWorkerButton worker={w} />
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => confirm("Delete this worker?") && del.mutate()}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={() => confirm("Delete this worker?") && del.mutate()}
+            >
               <Trash2 className="size-4 text-destructive" />
             </Button>
           </div>
@@ -94,7 +119,9 @@ function WorkerPage() {
       </Card>
 
       <section>
-        <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Assigned projects</h3>
+        <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+          Assigned projects
+        </h3>
         <Card className="divide-y">
           {stats.assignments.length === 0 && (
             <p className="p-4 text-sm text-muted-foreground">Not assigned to any project.</p>
@@ -110,7 +137,9 @@ function WorkerPage() {
                 <HardHat className="size-4 text-primary shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{a.projects?.name ?? "—"}</p>
-                  <p className="text-xs text-muted-foreground">Assigned {new Date(a.assigned_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Assigned {new Date(a.assigned_at).toLocaleDateString()}
+                  </p>
                 </div>
               </div>
             </Link>
@@ -120,19 +149,32 @@ function WorkerPage() {
 
       <section>
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Attendance statistics</h3>
+          <h3 className="text-xs uppercase tracking-wider text-muted-foreground">
+            Attendance statistics
+          </h3>
           <div className="flex gap-2">
             <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-              <SelectTrigger className="h-8 w-24"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 w-24">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {MONTHS.map((m, i) => <SelectItem key={i} value={String(i+1)}>{m}</SelectItem>)}
+                {MONTHS.map((m, i) => (
+                  <SelectItem key={i} value={String(i + 1)}>
+                    {m}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-              <SelectTrigger className="h-8 w-24"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 w-24">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {[now.getFullYear()-1, now.getFullYear(), now.getFullYear()+1].map((y) =>
-                  <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map((y) => (
+                  <SelectItem key={y} value={String(y)}>
+                    {y}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -149,17 +191,23 @@ function WorkerPage() {
 
       {stats.timeline && stats.timeline.length > 0 && (
         <section>
-          <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Work timeline</h3>
+          <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+            Work timeline
+          </h3>
           <Card className="divide-y max-h-96 overflow-auto">
             {stats.timeline.map((t: any, i: number) => (
               <div key={i} className="p-3 flex items-center justify-between text-sm gap-2">
                 <div className="min-w-0">
                   <p className="font-medium tabular-nums">{formatLedgerDate(t.date)}</p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {t.projects?.name ?? "—"}{t.work_area ? ` · ${t.work_area}` : ""}
+                    {t.projects?.name ?? "—"}
+                    {t.work_area ? ` · ${t.work_area}` : ""}
                   </p>
                 </div>
-                <Badge variant={t.type === "absent" ? "secondary" : "default"} className="capitalize shrink-0">
+                <Badge
+                  variant={t.type === "absent" ? "secondary" : "default"}
+                  className="capitalize shrink-0"
+                >
                   {t.type}
                 </Badge>
               </div>
@@ -169,7 +217,9 @@ function WorkerPage() {
       )}
 
       <section>
-        <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Financial summary</h3>
+        <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+          Financial summary
+        </h3>
         <div className="grid grid-cols-2 gap-3">
           <Stat label="Month earnings" value={formatCurrency(stats.monthEarnings)} />
           <Stat label="Month paid" value={formatCurrency(stats.monthPaid)} />
@@ -177,9 +227,18 @@ function WorkerPage() {
           <Stat label="Total paid" value={formatCurrency(stats.lifetimePaid)} />
           <div className="col-span-2">
             {stats.lifetimeBalance < 0 ? (
-              <Stat label="Advance Taken (Balance)" value={formatCurrency(Math.abs(stats.lifetimeBalance))} highlight isAdvance />
+              <Stat
+                label="Advance Taken (Balance)"
+                value={formatCurrency(Math.abs(stats.lifetimeBalance))}
+                highlight
+                isAdvance
+              />
             ) : (
-              <Stat label="Pending Balance" value={formatCurrency(stats.lifetimeBalance)} highlight />
+              <Stat
+                label="Pending Balance"
+                value={formatCurrency(stats.lifetimeBalance)}
+                highlight
+              />
             )}
           </div>
         </div>
@@ -187,11 +246,15 @@ function WorkerPage() {
 
       <section>
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Payment History & Ledger</h3>
+          <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+            Payment History & Ledger
+          </h3>
           <PaymentDialog workerId={id} />
         </div>
         <Card className="divide-y">
-          {payments.length === 0 && <p className="p-4 text-sm text-muted-foreground">No payments recorded.</p>}
+          {payments.length === 0 && (
+            <p className="p-4 text-sm text-muted-foreground">No payments recorded.</p>
+          )}
           {payments.map((p) => (
             <div key={p.id} className="p-3 flex items-center justify-between text-sm">
               <div className="min-w-0">
@@ -208,7 +271,17 @@ function WorkerPage() {
   );
 }
 
-function Stat({ label, value, highlight, isAdvance }: { label: string; value: string; highlight?: boolean; isAdvance?: boolean }) {
+function Stat({
+  label,
+  value,
+  highlight,
+  isAdvance,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+  isAdvance?: boolean;
+}) {
   const highlightClass = isAdvance
     ? "bg-amber-600 dark:bg-amber-700 text-white border-amber-600 dark:border-amber-700"
     : "bg-primary text-primary-foreground border-primary";
@@ -248,10 +321,14 @@ function PaymentDialog({ workerId }: { workerId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm"><Plus className="size-4" /> Payment</Button>
+        <Button size="sm">
+          <Plus className="size-4" /> Payment
+        </Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Record payment</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Record payment</DialogTitle>
+        </DialogHeader>
         <form
           className="space-y-3"
           onSubmit={(e) => {
@@ -271,14 +348,21 @@ function PaymentDialog({ workerId }: { workerId: string }) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="paid_on">Date</Label>
-            <Input id="paid_on" name="paid_on" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
+            <Input
+              id="paid_on"
+              name="paid_on"
+              type="date"
+              defaultValue={new Date().toISOString().slice(0, 10)}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="note">Note</Label>
             <Textarea id="note" name="note" rows={2} />
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={m.isPending}>{m.isPending ? "Saving…" : "Record"}</Button>
+            <Button type="submit" disabled={m.isPending}>
+              {m.isPending ? "Saving…" : "Record"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

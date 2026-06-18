@@ -5,7 +5,13 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { generateMonthlyReport } from "@/lib/reports.functions";
 import { listProjects } from "@/lib/projects.functions";
@@ -19,7 +25,7 @@ export const Route = createFileRoute("/_authenticated/reports")({
   component: ReportsPage,
 });
 
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function ReportsPage() {
   const now = new Date();
@@ -38,15 +44,20 @@ function ReportsPage() {
   const { data: workers = [] } = useQuery({ queryKey: ["workers"], queryFn: () => workersFn() });
   const { data: matrix } = useQuery({
     queryKey: ["att-matrix", year, month, projectId],
-    queryFn: () => matrixFn({ data: { year, month, project_id: projectId === "all" ? null : projectId } }),
+    queryFn: () =>
+      matrixFn({ data: { year, month, project_id: projectId === "all" ? null : projectId } }),
   });
-  const { data: projStats = [] } = useQuery({ queryKey: ["projects", "stats"], queryFn: () => projStatsFn() });
+  const { data: projStats = [] } = useQuery({
+    queryKey: ["projects", "stats"],
+    queryFn: () => projStatsFn(),
+  });
 
   const gen = useMutation({
     mutationFn: () =>
       genFn({
         data: {
-          year, month,
+          year,
+          month,
           project_id: projectId === "all" ? null : projectId,
           worker_id: workerId === "all" ? null : workerId,
         },
@@ -55,7 +66,9 @@ function ReportsPage() {
       const bin = atob(res.base64);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const blob = new Blob([bytes], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -76,38 +89,62 @@ function ReportsPage() {
           <div className="space-y-1.5">
             <Label>Month</Label>
             <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {MONTHS.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}
+                {MONTHS.map((m, i) => (
+                  <SelectItem key={i} value={String(i + 1)}>
+                    {m}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label>Year</Label>
             <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {years.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                {years.map((y) => (
+                  <SelectItem key={y} value={String(y)}>
+                    {y}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label>Project</Label>
             <Select value={projectId} onValueChange={setProjectId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All projects</SelectItem>
-                {projects.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                {projects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label>Worker</Label>
             <Select value={workerId} onValueChange={setWorkerId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All workers</SelectItem>
-                {workers.map((w) => <SelectItem key={w.id} value={w.id}>{w.full_name}</SelectItem>)}
+                {workers.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>
+                    {w.full_name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -129,10 +166,16 @@ function ReportsPage() {
               </div>
               <div>
                 <h2 className="font-semibold">Contractor Report (XLSX)</h2>
-                <p className="text-xs text-muted-foreground">3 sheets: Workforce Summary, Attendance Calendar, Labour Cost.</p>
+                <p className="text-xs text-muted-foreground">
+                  3 sheets: Workforce Summary, Attendance Calendar, Labour Cost.
+                </p>
               </div>
             </div>
-            <Button onClick={() => gen.mutate()} disabled={gen.isPending} className="w-full tap-target">
+            <Button
+              onClick={() => gen.mutate()}
+              disabled={gen.isPending}
+              className="w-full tap-target"
+            >
               <Download className="size-4" />
               {gen.isPending ? "Generating…" : "Download XLSX"}
             </Button>
@@ -142,46 +185,64 @@ function ReportsPage() {
         <TabsContent value="calendar" className="mt-4">
           <Card className="p-3 overflow-x-auto">
             {!matrix || matrix.rows.length === 0 ? (
-              <p className="p-4 text-sm text-muted-foreground text-center">No attendance for this period.</p>
+              <p className="p-4 text-sm text-muted-foreground text-center">
+                No attendance for this period.
+              </p>
             ) : (
               <table className="text-xs border-collapse">
                 <thead>
                   <tr>
                     <th className="sticky left-0 bg-background text-left p-2 border-b">Worker</th>
                     {Array.from({ length: matrix.days }, (_, i) => i + 1).map((d) => (
-                      <th key={d} className="p-1.5 border-b text-center font-medium w-7">{d}</th>
+                      <th key={d} className="p-1.5 border-b text-center font-medium w-7">
+                        {d}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {matrix.rows.map((r: any) => (
                     <tr key={r.worker_id} className="border-b">
-                      <td className="sticky left-0 bg-background p-2 font-medium whitespace-nowrap">{r.name}</td>
+                      <td className="sticky left-0 bg-background p-2 font-medium whitespace-nowrap">
+                        {r.name}
+                      </td>
                       {r.cells.map((c: string, i: number) => (
-                        <td key={i} className={`text-center p-1.5 tabular-nums ${cellClass(c)}`}>{cellLabel(c)}</td>
+                        <td key={i} className={`text-center p-1.5 tabular-nums ${cellClass(c)}`}>
+                          {cellLabel(c)}
+                        </td>
                       ))}
                     </tr>
                   ))}
                 </tbody>
               </table>
             )}
-            <p className="mt-3 text-xs text-muted-foreground px-2">P = present (full), H = half day, O = overtime, A = absent.</p>
+            <p className="mt-3 text-xs text-muted-foreground px-2">
+              P = present (full), H = half day, O = overtime, A = absent.
+            </p>
           </Card>
         </TabsContent>
 
         <TabsContent value="cost" className="mt-4">
           <Card className="divide-y">
-            {projStats.length === 0 && <p className="p-4 text-sm text-muted-foreground text-center">No projects.</p>}
+            {projStats.length === 0 && (
+              <p className="p-4 text-sm text-muted-foreground text-center">No projects.</p>
+            )}
             {projStats.map((p: any) => (
               <div key={p.id} className="p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-medium truncate">{p.name}</p>
                     <p className="text-xs text-muted-foreground tabular-nums">
-                      {p.assignedCount} workers · avg {formatCurrency(p.assignedCount > 0 ? Math.round(p.monthCost / p.assignedCount) : 0)}/worker
+                      {p.assignedCount} workers · avg{" "}
+                      {formatCurrency(
+                        p.assignedCount > 0 ? Math.round(p.monthCost / p.assignedCount) : 0,
+                      )}
+                      /worker
                     </p>
                   </div>
-                  <span className="font-semibold tabular-nums text-primary">{formatCurrency(p.monthCost)}</span>
+                  <span className="font-semibold tabular-nums text-primary">
+                    {formatCurrency(p.monthCost)}
+                  </span>
                 </div>
               </div>
             ))}

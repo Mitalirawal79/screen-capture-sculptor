@@ -1,18 +1,57 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { listProjectsWithStats, getProjectAssignedWorkers, getAttendanceForProjectDay, getAttendanceMatrix, listWorkersWithStats } from "@/lib/stats.functions";
-import { upsertAttendance, bulkUpsertAttendance, listProjectWorkAreas } from "@/lib/attendance.functions";
+import {
+  listProjectsWithStats,
+  getProjectAssignedWorkers,
+  getAttendanceForProjectDay,
+  getAttendanceMatrix,
+  listWorkersWithStats,
+} from "@/lib/stats.functions";
+import {
+  upsertAttendance,
+  bulkUpsertAttendance,
+  listProjectWorkAreas,
+  clearAttendance,
+  getAttendanceForDay,
+} from "@/lib/attendance.functions";
 import { assignWorker } from "@/lib/projects.functions";
 import { ATTENDANCE_LABEL, type AttendanceType } from "@/lib/wages";
 import { toast } from "sonner";
-import { Calendar, ArrowLeft, HardHat, ChevronRight, UserPlus, Sparkles, MapPin, Plus } from "lucide-react";
+import {
+  Calendar,
+  ArrowLeft,
+  HardHat,
+  ChevronRight,
+  UserPlus,
+  Sparkles,
+  MapPin,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+
+interface WorkerType {
+  id: string;
+  full_name: string;
+  worker_type: string | null;
+  daily_wage: string | number;
+  status: string;
+  assignedProjects?: string[];
+  monthDays?: number;
+  monthEarnings?: number;
+}
+
+interface AttendanceRow {
+  worker_id: string;
+  type: AttendanceType;
+  work_area: string | null;
+}
 
 export const Route = createFileRoute("/_authenticated/attendance")({
   component: AttendancePage,
@@ -23,14 +62,19 @@ const TYPES: AttendanceType[] = ["full", "half", "overtime", "absent"];
 function AttendancePage() {
   const [projectId, setProjectId] = useState<string | null>(null);
 
-  return projectId
-    ? <ProjectAttendance projectId={projectId} onBack={() => setProjectId(null)} />
-    : <ProjectPicker onPick={setProjectId} />;
+  return projectId ? (
+    <ProjectAttendance projectId={projectId} onBack={() => setProjectId(null)} />
+  ) : (
+    <ProjectPicker onPick={setProjectId} />
+  );
 }
 
 function ProjectPicker({ onPick }: { onPick: (id: string) => void }) {
   const fn = useServerFn(listProjectsWithStats);
-  const { data: projects = [] } = useQuery({ queryKey: ["projects", "stats"], queryFn: () => fn() });
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects", "stats"],
+    queryFn: () => fn(),
+  });
   const active = projects.filter((p) => p.status === "active" || p.status === "planning");
 
   return (
@@ -39,7 +83,9 @@ function ProjectPicker({ onPick }: { onPick: (id: string) => void }) {
         <HardHat className="size-5 text-primary" />
         <div>
           <p className="font-medium text-sm">Select project</p>
-          <p className="text-xs text-muted-foreground">Mark attendance for workers assigned to this site.</p>
+          <p className="text-xs text-muted-foreground">
+            Mark attendance for workers assigned to this site.
+          </p>
         </div>
       </Card>
 
@@ -83,8 +129,13 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
   const listAllWorkersWithStatsFn = useServerFn(listWorkersWithStats);
   const assignFn = useServerFn(assignWorker);
   const areasFn = useServerFn(listProjectWorkAreas);
+  const clearAttendanceFn = useServerFn(clearAttendance);
+  const getAttendanceForDayFn = useServerFn(getAttendanceForDay);
 
-  const { data: projects = [] } = useQuery({ queryKey: ["projects", "stats"], queryFn: () => projectsFn() });
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects", "stats"],
+    queryFn: () => projectsFn(),
+  });
   const project = projects.find((p) => p.id === projectId);
   const { data: recentAreas = [] } = useQuery({
     queryKey: ["work-areas", projectId],
@@ -99,8 +150,8 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
     queryKey: ["attendance", projectId, date],
     queryFn: () => dayFn({ data: { project_id: projectId, date } }),
   });
-  const byWorker = new Map(
-    dayRows.map((r) => [r.worker_id, { type: r.type as AttendanceType, work_area: (r as any).work_area as string | null }]),
+  const byWorker = new Map<string, { type: AttendanceType; work_area: string | null }>(
+    dayRows.map((r) => [r.worker_id, { type: r.type as AttendanceType, work_area: r.work_area }]),
   );
 
   // Yesterday's reference
@@ -111,8 +162,11 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
     queryKey: ["attendance", projectId, yesterdayStr],
     queryFn: () => dayFn({ data: { project_id: projectId, date: yesterdayStr } }),
   });
-  const yesterdayByWorker = new Map(
-    yesterdayRows.map((r) => [r.worker_id, { type: r.type as AttendanceType, work_area: (r as any).work_area as string | null }]),
+  const yesterdayByWorker = new Map<string, { type: AttendanceType; work_area: string | null }>(
+    yesterdayRows.map((r) => [
+      r.worker_id,
+      { type: r.type as AttendanceType, work_area: r.work_area },
+    ]),
   );
 
   const [bulkArea, setBulkArea] = useState<string>("");
@@ -121,21 +175,73 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
     queryKey: ["workers", "stats"],
     queryFn: () => listAllWorkersWithStatsFn(),
   });
-  const workerIdsOnSite = new Set(workers.map((w: any) => w.id));
-  const addableWorkers = allWorkersWithStats.filter(
-    (w: any) => w.status === "active" && !workerIdsOnSite.has(w.id),
+  const workerIdsOnSite = new Set((workers as { id: string }[]).map((w) => w.id));
+  const addableWorkers = (allWorkersWithStats as WorkerType[]).filter(
+    (w) => w.status === "active" && !workerIdsOnSite.has(w.id),
   );
 
+  // Query all today's attendance across all projects to prevent duplicates
+  const { data: allTodayAtt = [] } = useQuery({
+    queryKey: ["all-attendance", date],
+    queryFn: () => getAttendanceForDayFn({ data: { date } }),
+  });
+  const todayAttMap = new Map(allTodayAtt.map((r) => [r.worker_id, r.project_id]));
+
+  // State to track unmarked/unselected worker IDs in the current session
+  const [unmarkedWorkerIds, setUnmarkedWorkerIds] = useState<Set<string>>(new Set());
+
+  // Reset unmarked workers when project or date changes
+  const [lastDateProject, setLastDateProject] = useState("");
+  useEffect(() => {
+    const key = `${date}_${projectId}`;
+    if (key !== lastDateProject) {
+      setUnmarkedWorkerIds(new Set());
+      setLastDateProject(key);
+    }
+  }, [date, projectId, lastDateProject]);
+
+  // Mutation to initialize the default team in today's attendance (default to 'absent')
+  const initAttendance = useMutation({
+    mutationFn: (workersToInit: { id: string }[]) =>
+      bulkUpsertFn({
+        data: {
+          date,
+          project_id: projectId,
+          work_area: null,
+          workers: workersToInit.map((w) => ({
+            worker_id: w.id,
+            type: "absent" as AttendanceType,
+            work_area: null,
+          })),
+        },
+      }),
+    onSuccess: (_, workersToInit) => {
+      setUnmarkedWorkerIds(new Set(workersToInit.map((w) => w.id)));
+      qc.invalidateQueries({ queryKey: ["attendance", projectId, date] });
+      qc.invalidateQueries({ queryKey: ["project-workers", projectId, date] });
+      qc.invalidateQueries({ queryKey: ["all-attendance", date] });
+    },
+  });
+
+  // Preload default team as unmarked if today's attendance is empty
+  useEffect(() => {
+    if (workers.length > 0 && dayRows.length === 0 && !initAttendance.isPending) {
+      initAttendance.mutate(workers);
+    }
+  }, [workers, dayRows, date, projectId, initAttendance]);
 
   const mark = useMutation({
     mutationFn: (vars: { worker_id: string; type: AttendanceType; work_area?: string | null }) =>
       upsertFn({ data: { ...vars, date, project_id: projectId } }),
     onMutate: async ({ worker_id, type, work_area }) => {
       await qc.cancelQueries({ queryKey: ["attendance", projectId, date] });
-      const prev = qc.getQueryData<any[]>(["attendance", projectId, date]) ?? [];
+      const prev = qc.getQueryData<AttendanceRow[]>(["attendance", projectId, date]) ?? [];
       const existing = prev.find((r) => r.worker_id === worker_id);
-      const nextArea = work_area !== undefined ? work_area : existing?.work_area ?? null;
-      const next = [...prev.filter((r) => r.worker_id !== worker_id), { worker_id, type, work_area: nextArea }];
+      const nextArea = work_area !== undefined ? work_area : (existing?.work_area ?? null);
+      const next = [
+        ...prev.filter((r) => r.worker_id !== worker_id),
+        { worker_id, type, work_area: nextArea },
+      ];
       qc.setQueryData(["attendance", projectId, date], next);
       return { prev };
     },
@@ -144,6 +250,8 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
       toast.error("Couldn't save");
     },
     onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["attendance", projectId, date] });
+      qc.invalidateQueries({ queryKey: ["all-attendance", date] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       qc.invalidateQueries({ queryKey: ["projects", "stats"] });
       qc.invalidateQueries({ queryKey: ["work-areas", projectId] });
@@ -157,7 +265,7 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
           date,
           project_id: projectId,
           work_area: bulkArea || null,
-          workers: workers.map((w: any) => {
+          workers: (workers as { id: string }[]).map((w) => {
             const cur = byWorker.get(w.id);
             return {
               worker_id: w.id,
@@ -168,13 +276,22 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
         },
       }),
     onSuccess: () => {
+      // Clear unmarked state for all workers when bulk-marking
+      setUnmarkedWorkerIds((prev) => {
+        const next = new Set(prev);
+        for (const w of workers) {
+          next.delete(w.id);
+        }
+        return next;
+      });
       qc.invalidateQueries({ queryKey: ["attendance", projectId, date] });
+      qc.invalidateQueries({ queryKey: ["all-attendance", date] });
       qc.invalidateQueries({ queryKey: ["projects", "stats"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       qc.invalidateQueries({ queryKey: ["work-areas", projectId] });
       toast.success("Marked all as Full Day");
     },
-    onError: (e: any) => toast.error(e.message || "Couldn't save bulk attendance"),
+    onError: (e: Error) => toast.error(e.message || "Couldn't save bulk attendance"),
   });
 
   const assign = useMutation({
@@ -185,7 +302,37 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
       qc.invalidateQueries({ queryKey: ["projects", "stats"] });
       toast.success("Worker assigned to project");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Mutation to remove a worker from today's workforce (deletes the attendance record)
+  const removeMutation = useMutation({
+    mutationFn: (worker_id: string) => clearAttendanceFn({ data: { worker_id, date } }),
+    onMutate: async (worker_id) => {
+      await qc.cancelQueries({ queryKey: ["attendance", projectId, date] });
+      const prev = qc.getQueryData<AttendanceRow[]>(["attendance", projectId, date]) ?? [];
+      const next = prev.filter((r) => r.worker_id !== worker_id);
+      qc.setQueryData(["attendance", projectId, date], next);
+
+      setUnmarkedWorkerIds((prevSet) => {
+        const nextSet = new Set(prevSet);
+        nextSet.delete(worker_id);
+        return nextSet;
+      });
+
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      qc.setQueryData(["attendance", projectId, date], ctx?.prev);
+      toast.error("Couldn't remove worker");
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["attendance", projectId, date] });
+      qc.invalidateQueries({ queryKey: ["project-workers", projectId, date] });
+      qc.invalidateQueries({ queryKey: ["all-attendance", date] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["projects", "stats"] });
+    },
   });
 
   const present = dayRows.filter((r) => r.type !== "absent").length;
@@ -206,8 +353,15 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
         </div>
         <div className="flex items-center gap-3">
           <Calendar className="size-4 text-muted-foreground" />
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="flex-1" />
-          <Badge variant="secondary" className="tabular-nums">{present}/{workers.length}</Badge>
+          <Input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="flex-1"
+          />
+          <Badge variant="secondary" className="tabular-nums">
+            {present}/{workers.length}
+          </Badge>
         </div>
       </Card>
 
@@ -217,11 +371,7 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
         </Card>
       ) : (
         <div className="space-y-3">
-          <WorkAreaBulkRow
-            value={bulkArea}
-            onChange={setBulkArea}
-            recent={recentAreas}
-          />
+          <WorkAreaBulkRow value={bulkArea} onChange={setBulkArea} recent={recentAreas} />
 
           <Button
             variant="outline"
@@ -230,14 +380,18 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
             disabled={markAllFull.isPending || workers.length === 0}
           >
             <Sparkles className="size-3.5 text-primary" />
-            {markAllFull.isPending ? "Saving..." : `Mark All Full Day${bulkArea ? ` · ${bulkArea}` : ""}`}
+            {markAllFull.isPending
+              ? "Saving..."
+              : `Mark All Full Day${bulkArea ? ` · ${bulkArea}` : ""}`}
           </Button>
 
           <div className="space-y-2">
-            {workers.map((w: any) => {
+            {(workers as WorkerType[]).map((w) => {
               const current = byWorker.get(w.id);
               const yest = yesterdayByWorker.get(w.id);
               const effectiveArea = current?.work_area ?? bulkArea ?? "";
+              const isUnmarked = unmarkedWorkerIds.has(w.id) || !current;
+
               return (
                 <Card key={w.id} className="p-3">
                   <div className="flex items-center justify-between mb-2 gap-2">
@@ -247,7 +401,8 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
                         <span>{w.worker_type || "Worker"}</span>
                         {yest && (
                           <span className="text-[10px] text-muted-foreground/85 bg-accent/60 px-1 py-0.2 rounded font-normal tabular-nums">
-                            Yesterday: {ATTENDANCE_LABEL[yest.type]}{yest.work_area ? ` · ${yest.work_area}` : ""}
+                            Yesterday: {ATTENDANCE_LABEL[yest.type]}
+                            {yest.work_area ? ` · ${yest.work_area}` : ""}
                           </span>
                         )}
                       </p>
@@ -258,32 +413,52 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
                       onChange={(area) =>
                         mark.mutate({
                           worker_id: w.id,
-                          type: current?.type ?? "full",
+                          type: current?.type ?? "absent",
                           work_area: area || null,
                         })
                       }
                     />
                   </div>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {TYPES.map((t) => (
-                      <button
-                        key={t}
-                        onClick={() =>
-                          mark.mutate({
-                            worker_id: w.id,
-                            type: t,
-                            work_area: current?.work_area ?? bulkArea ?? null,
-                          })
-                        }
-                        className={`tap-target rounded-md text-xs font-medium px-1 py-2 border transition-colors ${
-                          current?.type === t
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-background hover:bg-accent border-border"
-                        }`}
-                      >
-                        {ATTENDANCE_LABEL[t]}
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {TYPES.map((t) => {
+                      const isSelected = !isUnmarked && current?.type === t;
+                      return (
+                        <button
+                          key={t}
+                          onClick={() => {
+                            setUnmarkedWorkerIds((prev) => {
+                              const next = new Set(prev);
+                              next.delete(w.id);
+                              return next;
+                            });
+                            mark.mutate({
+                              worker_id: w.id,
+                              type: t,
+                              work_area: current?.work_area ?? bulkArea ?? null,
+                            });
+                          }}
+                          className={`tap-target rounded-md text-xs font-medium px-1 py-2 border transition-colors ${
+                            isSelected
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background hover:bg-accent border-border"
+                          }`}
+                        >
+                          {ATTENDANCE_LABEL[t]}
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => removeMutation.mutate(w.id)}
+                      disabled={removeMutation.isPending}
+                      className={`tap-target rounded-md text-xs font-medium px-1 py-2 border transition-colors flex items-center justify-center gap-1 ${
+                        removeMutation.isPending && removeMutation.variables === w.id
+                          ? "bg-destructive text-destructive-foreground border-destructive"
+                          : "bg-background border-destructive text-destructive hover:bg-destructive/10"
+                      }`}
+                    >
+                      <Trash2 className="size-3.5" />
+                      Remove
+                    </button>
                   </div>
                 </Card>
               );
@@ -304,40 +479,62 @@ function ProjectAttendance({ projectId, onBack }: { projectId: string; onBack: (
             Workers move freely between sites — adding here only logs them on {date}.
           </p>
           <div className="space-y-2">
-            {addableWorkers.map((w: any) => (
-              <Card key={w.id} className="p-3 bg-muted/40 border-dashed">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm truncate">{w.full_name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {w.worker_type || "Worker"}
-                      {w.assignedProjects && w.assignedProjects.length > 0
-                        ? ` · Default: ${w.assignedProjects.join(", ")}`
-                        : " · No default site"}
-                    </p>
+            {addableWorkers.map((w) => {
+              const existingProjId = todayAttMap.get(w.id);
+              const isAlreadyAddedElsewhere = !!existingProjId && existingProjId !== projectId;
+              const existingProjName = isAlreadyAddedElsewhere
+                ? projects.find((p) => p.id === existingProjId)?.name || "another site"
+                : "";
+
+              return (
+                <Card key={w.id} className="p-3 bg-muted/40 border-dashed">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{w.full_name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {w.worker_type || "Worker"}
+                        {isAlreadyAddedElsewhere ? (
+                          <span className="text-destructive font-medium block mt-0.5">
+                            Already added to {existingProjName} today
+                          </span>
+                        ) : w.assignedProjects && w.assignedProjects.length > 0 ? (
+                          ` · Default: ${w.assignedProjects.join(", ")}`
+                        ) : (
+                          " · No default site"
+                        )}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0"
+                      onClick={() => {
+                        setUnmarkedWorkerIds((prev) => {
+                          const next = new Set(prev);
+                          next.add(w.id);
+                          return next;
+                        });
+                        mark.mutate({
+                          worker_id: w.id,
+                          type: "absent",
+                          work_area: bulkArea || null,
+                        });
+                      }}
+                      disabled={mark.isPending || isAlreadyAddedElsewhere}
+                    >
+                      <Plus className="size-3.5 mr-1" />
+                      Add to Site
+                    </Button>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="shrink-0"
-                    onClick={() =>
-                      mark.mutate({ worker_id: w.id, type: "full", work_area: bulkArea || null })
-                    }
-                    disabled={mark.isPending}
-                  >
-                    <Plus className="size-3.5 mr-1" />
-                    Add Full Day
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         </section>
       )}
     </div>
   );
 }
-
 
 const DEFAULT_AREAS = ["Bedroom", "Hall", "Kitchen", "Bath", "Plumbing", "Electrical"];
 
@@ -432,7 +629,9 @@ function WorkAreaPicker({
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64 p-3 space-y-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Work area</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Work area
+        </p>
         <div className="flex flex-wrap gap-1.5">
           {areas.map((a) => (
             <button

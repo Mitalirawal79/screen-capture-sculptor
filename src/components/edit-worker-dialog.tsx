@@ -6,14 +6,31 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Pencil, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { updateWorker } from "@/lib/workers.functions";
 
-export function EditWorkerButton({ worker, variant = "ghost" }: { worker: any; variant?: "ghost" | "outline" }) {
+export function EditWorkerButton({
+  worker,
+  variant = "ghost",
+}: {
+  worker: any;
+  variant?: "ghost" | "outline";
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -23,7 +40,11 @@ export function EditWorkerButton({ worker, variant = "ghost" }: { worker: any; v
         size="icon"
         aria-label="Edit worker"
         className="h-8 w-8 rounded-full hover:bg-accent"
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(true); }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen(true);
+        }}
       >
         <Pencil className="size-4" />
       </Button>
@@ -32,7 +53,15 @@ export function EditWorkerButton({ worker, variant = "ghost" }: { worker: any; v
   );
 }
 
-function EditWorkerDialog({ worker, open, onOpenChange }: { worker: any; open: boolean; onOpenChange: (v: boolean) => void }) {
+function EditWorkerDialog({
+  worker,
+  open,
+  onOpenChange,
+}: {
+  worker: any;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const qc = useQueryClient();
   const fn = useServerFn(updateWorker);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -76,7 +105,9 @@ function EditWorkerDialog({ worker, open, onOpenChange }: { worker: any; open: b
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Edit worker</DialogTitle>
-          <DialogDescription>Update profile, wage and status. Changes save instantly.</DialogDescription>
+          <DialogDescription>
+            Update profile, wage and status. Changes save instantly.
+          </DialogDescription>
         </DialogHeader>
         <form className="space-y-3" onSubmit={onSubmit}>
           <div className="space-y-1.5">
@@ -91,18 +122,36 @@ function EditWorkerDialog({ worker, open, onOpenChange }: { worker: any; open: b
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ew_type">Worker type</Label>
-              <Input id="ew_type" name="worker_type" placeholder="Mason, Helper…" defaultValue={worker.worker_type ?? ""} />
+              <Input
+                id="ew_type"
+                name="worker_type"
+                placeholder="Mason, Helper…"
+                defaultValue={worker.worker_type ?? ""}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="ew_wage">Daily wage</Label>
-              <Input id="ew_wage" name="daily_wage" type="number" min="0" step="1" required defaultValue={worker.daily_wage} />
+              <Input
+                id="ew_wage"
+                name="daily_wage"
+                type="number"
+                min="0"
+                step="1"
+                required
+                defaultValue={worker.daily_wage}
+              />
               {errors.daily_wage && <p className="text-xs text-destructive">{errors.daily_wage}</p>}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ew_join">Joining date</Label>
-              <Input id="ew_join" name="joining_date" type="date" defaultValue={worker.joining_date} />
+              <Input
+                id="ew_join"
+                name="joining_date"
+                type="date"
+                defaultValue={worker.joining_date}
+              />
             </div>
           </div>
           <div className="space-y-1.5">
@@ -112,7 +161,9 @@ function EditWorkerDialog({ worker, open, onOpenChange }: { worker: any; open: b
           <div className="space-y-1.5">
             <Label>Status</Label>
             <Select name="status" defaultValue={worker.status}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
@@ -120,7 +171,12 @@ function EditWorkerDialog({ worker, open, onOpenChange }: { worker: any; open: b
             </Select>
           </div>
           <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={m.isPending}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={m.isPending}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={m.isPending}>

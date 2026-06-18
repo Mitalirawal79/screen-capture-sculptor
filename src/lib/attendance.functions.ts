@@ -7,7 +7,7 @@ const workAreaSchema = z.string().trim().max(80).optional().nullable();
 
 export const getAttendanceForDay = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { date: string }) => z.object({ date: z.string().min(8) }).parse(d))
+  .validator((d: { date: string }) => z.object({ date: z.string().min(8) }).parse(d))
   .handler(async ({ context, data }) => {
     const { data: rows, error } = await context.supabase
       .from("attendance")
@@ -19,7 +19,7 @@ export const getAttendanceForDay = createServerFn({ method: "GET" })
 
 export const upsertAttendance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         worker_id: z.string().uuid(),
@@ -31,27 +31,24 @@ export const upsertAttendance = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ context, data }) => {
-    const { error } = await context.supabase
-      .from("attendance")
-      .upsert(
-        {
-          worker_id: data.worker_id,
-          date: data.date,
-          type: data.type,
-          project_id: data.project_id,
-          work_area: data.work_area ? data.work_area : null,
-          owner_id: context.userId,
-        },
-        { onConflict: "worker_id,date,project_id" },
-      );
+    const { error } = await context.supabase.from("attendance").upsert(
+      {
+        worker_id: data.worker_id,
+        date: data.date,
+        type: data.type,
+        project_id: data.project_id,
+        work_area: data.work_area ? data.work_area : null,
+        owner_id: context.userId,
+      },
+      { onConflict: "worker_id,date,project_id" },
+    );
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
-
 export const bulkUpsertAttendance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         date: z.string().min(8),
@@ -62,7 +59,7 @@ export const bulkUpsertAttendance = createServerFn({ method: "POST" })
             worker_id: z.string().uuid(),
             type: typeEnum,
             work_area: workAreaSchema,
-          })
+          }),
         ),
       })
       .parse(d),
@@ -85,7 +82,7 @@ export const bulkUpsertAttendance = createServerFn({ method: "POST" })
 
 export const clearAttendance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({ worker_id: z.string().uuid(), date: z.string().min(8) }).parse(d),
   )
   .handler(async ({ context, data }) => {
@@ -100,7 +97,7 @@ export const clearAttendance = createServerFn({ method: "POST" })
 
 export const getWorkerAttendance = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { worker_id: string; from: string; to: string }) =>
+  .validator((d: { worker_id: string; from: string; to: string }) =>
     z
       .object({
         worker_id: z.string().uuid(),
@@ -123,9 +120,7 @@ export const getWorkerAttendance = createServerFn({ method: "GET" })
 
 export const listProjectWorkAreas = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { project_id: string }) =>
-    z.object({ project_id: z.string().uuid() }).parse(d),
-  )
+  .validator((d: { project_id: string }) => z.object({ project_id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const { data: rows, error } = await context.supabase
       .from("attendance")
@@ -150,12 +145,14 @@ export const listProjectWorkAreas = createServerFn({ method: "GET" })
 
 export const getProjectWorkAreaCosts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { project_id: string; from?: string; to?: string }) =>
-    z.object({
-      project_id: z.string().uuid(),
-      from: z.string().optional(),
-      to: z.string().optional(),
-    }).parse(d),
+  .validator((d: { project_id: string; from?: string; to?: string }) =>
+    z
+      .object({
+        project_id: z.string().uuid(),
+        from: z.string().optional(),
+        to: z.string().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ context, data }) => {
     const sb = context.supabase;

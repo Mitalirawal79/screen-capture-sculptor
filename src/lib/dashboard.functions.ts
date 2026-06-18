@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { wageFor, type AttendanceType } from "./wages";
+import { wageFor, type AttendanceType, calculateGroupedEarnings } from "./wages";
 
 function monthBounds(d = new Date()) {
   const from = new Date(d.getFullYear(), d.getMonth(), 1);
@@ -19,7 +19,11 @@ export const getDashboard = createServerFn({ method: "GET" })
     const [workersRes, todayAttRes, monthAttRes, projectsRes, paymentsRes] = await Promise.all([
       sb.from("workers").select("id, full_name, daily_wage, status"),
       sb.from("attendance").select("worker_id, type").eq("date", today),
-      sb.from("attendance").select("worker_id, type, date").gte("date", from).lte("date", to),
+      sb
+        .from("attendance")
+        .select("worker_id, type, date, project_id")
+        .gte("date", from)
+        .lte("date", to),
       sb.from("projects").select("id, name, status, progress_pct"),
       sb.from("payments").select("worker_id, amount").gte("paid_on", from).lte("paid_on", to),
     ]);
@@ -37,19 +41,21 @@ export const getDashboard = createServerFn({ method: "GET" })
     const absentToday = activeWorkers - presentToday;
     const overtimeToday = todayAtt.filter((a) => a.type === "overtime").length;
 
-    const monthEarnings = new Map<string, number>();
+    const attByWorker = new Map<string, NonNullable<typeof monthAttRes.data>>();
     for (const a of monthAttRes.data ?? []) {
-      const w = wageMap.get(a.worker_id) ?? 0;
-      monthEarnings.set(
-        a.worker_id,
-        (monthEarnings.get(a.worker_id) ?? 0) + wageFor(a.type as AttendanceType, w),
-      );
+      if (!attByWorker.has(a.worker_id)) {
+        attByWorker.set(a.worker_id, []);
+      }
+      attByWorker.get(a.worker_id)!.push(a);
     }
-    const totalMonthCost = [...monthEarnings.values()].reduce((s, x) => s + x, 0);
-    const totalPaidThisMonth = (paymentsRes.data ?? []).reduce(
-      (s, p) => s + Number(p.amount),
-      0,
-    );
+
+    let totalMonthCost = 0;
+    for (const [wid, workerAtt] of attByWorker.entries()) {
+      const w = wageMap.get(wid) ?? 0;
+      totalMonthCost += calculateGroupedEarnings(workerAtt, w);
+    }
+
+    const totalPaidThisMonth = (paymentsRes.data ?? []).reduce((s, p) => s + Number(p.amount), 0);
 
     const projects = projectsRes.data ?? [];
     const activeProjects = projects.filter((p) => p.status === "active").length;
@@ -64,7 +70,7 @@ export const getDashboard = createServerFn({ method: "GET" })
       overtimeToday,
       activeProjects,
       totalProjects: projects.length,
-      monthLabourCost: Math.round(totalMonthCost),
+      monthLabourCost: totalMonthCost,
       pendingWages: Math.round(pendingWages),
     };
   });
@@ -79,7 +85,11 @@ export const getRecentActivity = createServerFn({ method: "GET" })
         .select("id, date, type, worker_id, created_at, workers(full_name)")
         .order("created_at", { ascending: false })
         .limit(8),
-      sb.from("workers").select("id, full_name, created_at").order("created_at", { ascending: false }).limit(5),
+      sb
+        .from("workers")
+        .select("id, full_name, created_at")
+        .order("created_at", { ascending: false })
+        .limit(5),
       sb
         .from("project_updates")
         .select("id, note, created_at, is_milestone, projects(name)")

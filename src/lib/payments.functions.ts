@@ -4,9 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const listPayments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { worker_id: string }) =>
-    z.object({ worker_id: z.string().uuid() }).parse(d),
-  )
+  .validator((d: { worker_id: string }) => z.object({ worker_id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const { data: rows, error } = await context.supabase
       .from("payments")
@@ -19,7 +17,7 @@ export const listPayments = createServerFn({ method: "GET" })
 
 export const recordPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         worker_id: z.string().uuid(),
@@ -39,7 +37,7 @@ export const recordPayment = createServerFn({ method: "POST" })
 
 export const deletePayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const { error } = await context.supabase.from("payments").delete().eq("id", data.id);
     if (error) throw new Error(error.message);

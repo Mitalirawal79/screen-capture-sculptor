@@ -6,8 +6,18 @@ import { getRecentActivity } from "@/lib/dashboard.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Users, UserCheck, HardHat, Banknote, CalendarCheck2, Plus,
-  FileSpreadsheet, TrendingUp, Activity, Trophy, AlertTriangle, UserPlus,
+  Users,
+  UserCheck,
+  HardHat,
+  Banknote,
+  CalendarCheck2,
+  Plus,
+  FileSpreadsheet,
+  TrendingUp,
+  Activity,
+  Trophy,
+  AlertTriangle,
+  UserPlus,
 } from "lucide-react";
 import { formatCurrency, formatNumber } from "@/lib/format";
 
@@ -28,8 +38,17 @@ function Dashboard() {
         <div className="grid grid-cols-2 gap-3">
           <Kpi icon={HardHat} label="Active projects" value={formatNumber(k?.activeProjects)} />
           <Kpi icon={Users} label="Total workers" value={formatNumber(k?.totalWorkers)} />
-          <Kpi icon={UserCheck} label="Present today" value={formatNumber(k?.presentToday)} tone="success" />
-          <Kpi icon={Banknote} label="Month labour cost" value={formatCurrency(k?.monthLabourCost)} />
+          <Kpi
+            icon={UserCheck}
+            label="Present today"
+            value={formatNumber(k?.presentToday)}
+            tone="success"
+          />
+          <Kpi
+            icon={Banknote}
+            label="Month labour cost"
+            value={formatCurrency(k?.monthLabourCost)}
+          />
         </div>
       </section>
 
@@ -51,11 +70,18 @@ function Dashboard() {
                   <p className="font-medium truncate">{s.name}</p>
                   <p className="text-xs text-muted-foreground truncate">{s.location || "—"}</p>
                 </div>
-                <span className="text-sm font-semibold tabular-nums text-primary">{formatCurrency(s.monthCost)}</span>
+                <span className="text-sm font-semibold tabular-nums text-primary">
+                  {formatCurrency(s.monthCost)}
+                </span>
               </div>
               <div className="flex gap-4 mt-2 text-xs text-muted-foreground tabular-nums">
-                <span><span className="text-foreground font-medium">{s.assigned}</span> assigned</span>
-                <span><span className="text-foreground font-medium">{s.presentToday}</span> present today</span>
+                <span>
+                  <span className="text-foreground font-medium">{s.assigned}</span> assigned
+                </span>
+                <span>
+                  <span className="text-foreground font-medium">{s.presentToday}</span> present
+                  today
+                </span>
               </div>
             </Link>
           ))}
@@ -63,7 +89,9 @@ function Dashboard() {
       </section>
 
       <section>
-        <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Quick actions</h2>
+        <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+          Quick actions
+        </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <QuickAction to="/attendance" icon={CalendarCheck2} label="Mark attendance" />
           <QuickAction to="/projects" icon={Plus} label="Add project" />
@@ -75,32 +103,56 @@ function Dashboard() {
       <section>
         <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Insights</h2>
         <div className="grid grid-cols-2 gap-3">
-          <Insight icon={TrendingUp} label="Top labour cost"
+          <Insight
+            icon={TrendingUp}
+            label="Top labour cost"
             primary={k?.insights?.topProject?.name ?? "—"}
-            secondary={k?.insights?.topProject ? formatCurrency(k.insights.topProject.value) : ""} />
-          <Insight icon={Activity} label="Most active site"
+            secondary={k?.insights?.topProject ? formatCurrency(k.insights.topProject.value) : ""}
+          />
+          <Insight
+            icon={Activity}
+            label="Most active site"
             primary={k?.insights?.mostActiveProject?.name ?? "—"}
-            secondary={k?.insights?.mostActiveProject ? `${k.insights.mostActiveProject.days} entries` : ""} />
-          <Insight icon={Trophy} label="Top earner"
+            secondary={
+              k?.insights?.mostActiveProject ? `${k.insights.mostActiveProject.days} entries` : ""
+            }
+          />
+          <Insight
+            icon={Trophy}
+            label="Top earner"
             primary={k?.insights?.topWorker?.name ?? "—"}
-            secondary={k?.insights?.topWorker ? formatCurrency(k.insights.topWorker.value) : ""} tone="success" />
-          <Insight icon={AlertTriangle} label="Lowest attendance"
+            secondary={k?.insights?.topWorker ? formatCurrency(k.insights.topWorker.value) : ""}
+            tone="success"
+          />
+          <Insight
+            icon={AlertTriangle}
+            label="Lowest attendance"
             primary={k?.insights?.lowestWorker?.name ?? "—"}
-            secondary={k?.insights?.lowestWorker ? `${k.insights.lowestWorker.days} days` : ""} tone="warning" />
+            secondary={k?.insights?.lowestWorker ? `${k.insights.lowestWorker.days} days` : ""}
+            tone="warning"
+          />
         </div>
       </section>
 
       <section>
-        <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Recent activity</h2>
+        <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+          Recent activity
+        </h2>
         <Card className="divide-y">
           {(activity ?? []).length === 0 && (
             <p className="p-4 text-sm text-muted-foreground">No activity yet.</p>
           )}
           {(activity ?? []).map((a) => (
             <div key={a.id} className="p-3 text-sm flex items-start gap-3">
-              <span className={`mt-1.5 size-2 rounded-full shrink-0 ${
-                a.kind === "attendance" ? "bg-primary" : a.kind === "worker" ? "bg-[oklch(var(--success))]" : "bg-[oklch(var(--warning))]"
-              }`} />
+              <span
+                className={`mt-1.5 size-2 rounded-full shrink-0 ${
+                  a.kind === "attendance"
+                    ? "bg-primary"
+                    : a.kind === "worker"
+                      ? "bg-[oklch(var(--success))]"
+                      : "bg-[oklch(var(--warning))]"
+                }`}
+              />
               <div className="flex-1 min-w-0">
                 <p className="truncate">{a.text}</p>
                 <p className="text-xs text-muted-foreground">{new Date(a.at).toLocaleString()}</p>
@@ -113,8 +165,22 @@ function Dashboard() {
   );
 }
 
-function Kpi({ icon: Icon, label, value, tone = "default" }: { icon: any; label: string; value: string; tone?: "default" | "success" | "warning" }) {
-  const toneClass = { default: "text-primary", success: "text-[var(--success)]", warning: "text-[var(--warning)]" }[tone];
+function Kpi({
+  icon: Icon,
+  label,
+  value,
+  tone = "default",
+}: {
+  icon: any;
+  label: string;
+  value: string;
+  tone?: "default" | "success" | "warning";
+}) {
+  const toneClass = {
+    default: "text-primary",
+    success: "text-[var(--success)]",
+    warning: "text-[var(--warning)]",
+  }[tone];
   return (
     <Card className="p-4 glass">
       <div className="flex items-center justify-between">
@@ -126,8 +192,24 @@ function Kpi({ icon: Icon, label, value, tone = "default" }: { icon: any; label:
   );
 }
 
-function Insight({ icon: Icon, label, primary, secondary, tone = "default" }: { icon: any; label: string; primary: string; secondary: string; tone?: "default" | "success" | "warning" }) {
-  const toneClass = { default: "text-primary", success: "text-[var(--success)]", warning: "text-[var(--warning)]" }[tone];
+function Insight({
+  icon: Icon,
+  label,
+  primary,
+  secondary,
+  tone = "default",
+}: {
+  icon: any;
+  label: string;
+  primary: string;
+  secondary: string;
+  tone?: "default" | "success" | "warning";
+}) {
+  const toneClass = {
+    default: "text-primary",
+    success: "text-[var(--success)]",
+    warning: "text-[var(--warning)]",
+  }[tone];
   return (
     <Card className="p-3">
       <div className="flex items-center gap-2">

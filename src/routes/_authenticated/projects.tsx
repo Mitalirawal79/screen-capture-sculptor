@@ -8,8 +8,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createProject } from "@/lib/projects.functions";
 import { listProjectsWithStats } from "@/lib/stats.functions";
 import { Plus, ChevronRight, Users, Banknote } from "lucide-react";
@@ -22,35 +35,52 @@ export const Route = createFileRoute("/_authenticated/projects")({
 });
 
 const STATUS_LABEL: Record<string, string> = {
-  planning: "Planning", active: "Active", on_hold: "On hold", completed: "Completed",
+  planning: "Planning",
+  active: "Active",
+  on_hold: "On hold",
+  completed: "Completed",
 };
 
 function ProjectsPage() {
   const fn = useServerFn(listProjectsWithStats);
-  const { data: projects = [] } = useQuery({ queryKey: ["projects", "stats"], queryFn: () => fn() });
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects", "stats"],
+    queryFn: () => fn(),
+  });
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end"><AddProjectDialog /></div>
+      <div className="flex justify-end">
+        <AddProjectDialog />
+      </div>
       <Card className="divide-y">
         {projects.length === 0 && (
           <p className="p-6 text-sm text-muted-foreground text-center">No projects yet.</p>
         )}
         {projects.map((p: any) => (
           <div key={p.id} className="relative group">
-            <Link to="/projects/$id" params={{ id: p.id }} className="block p-4 pr-14 hover:bg-accent/40 transition-colors">
+            <Link
+              to="/projects/$id"
+              params={{ id: p.id }}
+              className="block p-4 pr-14 hover:bg-accent/40 transition-colors"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-medium truncate">{p.name}</p>
-                    <Badge variant={p.status === "active" ? "default" : "secondary"}>{STATUS_LABEL[p.status]}</Badge>
+                    <Badge variant={p.status === "active" ? "default" : "secondary"}>
+                      {STATUS_LABEL[p.status]}
+                    </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {p.client ? `${p.client} · ` : ""}{p.location || "—"}
+                    {p.client ? `${p.client} · ` : ""}
+                    {p.location || "—"}
                   </p>
                   <div className="mt-2 flex items-center gap-2">
                     <Progress value={p.progress_pct} className="h-1.5 flex-1" />
-                    <span className="text-xs text-muted-foreground tabular-nums w-9 text-right">{p.progress_pct}%</span>
+                    <span className="text-xs text-muted-foreground tabular-nums w-9 text-right">
+                      {p.progress_pct}%
+                    </span>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground tabular-nums">
                     <span className="inline-flex items-center gap-1 bg-accent/80 px-2 py-0.5 rounded font-medium text-foreground/80">
@@ -97,9 +127,15 @@ function AddProjectDialog() {
   });
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button className="tap-target"><Plus className="size-4" /> Add project</Button></DialogTrigger>
+      <DialogTrigger asChild>
+        <Button className="tap-target">
+          <Plus className="size-4" /> Add project
+        </Button>
+      </DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>New project</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>New project</DialogTitle>
+        </DialogHeader>
         <form
           className="space-y-3"
           onSubmit={(e) => {
@@ -117,21 +153,47 @@ function AddProjectDialog() {
             });
           }}
         >
-          <div className="space-y-1.5"><Label htmlFor="name">Name</Label><Input id="name" name="name" required /></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5"><Label htmlFor="client">Client</Label><Input id="client" name="client" /></div>
-            <div className="space-y-1.5"><Label htmlFor="location">Site</Label><Input id="location" name="location" /></div>
+          <div className="space-y-1.5">
+            <Label htmlFor="name">Name</Label>
+            <Input id="name" name="name" required />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5"><Label htmlFor="start_date">Start</Label><Input id="start_date" name="start_date" type="date" /></div>
-            <div className="space-y-1.5"><Label htmlFor="expected_end">Expected end</Label><Input id="expected_end" name="expected_end" type="date" /></div>
+            <div className="space-y-1.5">
+              <Label htmlFor="client">Client</Label>
+              <Input id="client" name="client" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="location">Site</Label>
+              <Input id="location" name="location" />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5"><Label htmlFor="contract_value">Contract value</Label><Input id="contract_value" name="contract_value" type="number" min="0" defaultValue="0" /></div>
+            <div className="space-y-1.5">
+              <Label htmlFor="start_date">Start</Label>
+              <Input id="start_date" name="start_date" type="date" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="expected_end">Expected end</Label>
+              <Input id="expected_end" name="expected_end" type="date" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="contract_value">Contract value</Label>
+              <Input
+                id="contract_value"
+                name="contract_value"
+                type="number"
+                min="0"
+                defaultValue="0"
+              />
+            </div>
             <div className="space-y-1.5">
               <Label>Status</Label>
               <Select name="status" defaultValue="planning">
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="planning">Planning</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
@@ -141,7 +203,11 @@ function AddProjectDialog() {
               </Select>
             </div>
           </div>
-          <DialogFooter><Button type="submit" disabled={m.isPending}>{m.isPending ? "Saving…" : "Create"}</Button></DialogFooter>
+          <DialogFooter>
+            <Button type="submit" disabled={m.isPending}>
+              {m.isPending ? "Saving…" : "Create"}
+            </Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

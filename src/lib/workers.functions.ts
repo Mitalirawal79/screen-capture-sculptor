@@ -25,7 +25,7 @@ export const listWorkers = createServerFn({ method: "GET" })
 
 export const getWorker = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const { data: worker, error } = await context.supabase
       .from("workers")
@@ -39,7 +39,7 @@ export const getWorker = createServerFn({ method: "GET" })
 
 export const createWorker = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => workerInput.parse(d))
+  .validator((d: unknown) => workerInput.parse(d))
   .handler(async ({ context, data }) => {
     const { data: row, error } = await context.supabase
       .from("workers")
@@ -60,9 +60,7 @@ export const createWorker = createServerFn({ method: "POST" })
 
 export const updateWorker = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    workerInput.partial().extend({ id: z.string().uuid() }).parse(d),
-  )
+  .validator((d: unknown) => workerInput.partial().extend({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const { id, ...patch } = data;
     const { data: row, error } = await context.supabase
@@ -86,10 +84,13 @@ export const updateWorker = createServerFn({ method: "POST" })
 
 export const deleteWorker = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const { data: w } = await context.supabase
-      .from("workers").select("full_name").eq("id", data.id).maybeSingle();
+      .from("workers")
+      .select("full_name")
+      .eq("id", data.id)
+      .maybeSingle();
     const { error } = await context.supabase.from("workers").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     await context.supabase.from("activity_log").insert({

@@ -7,8 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createWorker } from "@/lib/workers.functions";
 import { listWorkersWithStats } from "@/lib/stats.functions";
 import { Plus, Search, ChevronRight, Phone } from "lucide-react";
@@ -22,7 +35,10 @@ export const Route = createFileRoute("/_authenticated/workers")({
 
 function WorkersPage() {
   const fetchList = useServerFn(listWorkersWithStats);
-  const { data: workers = [] } = useQuery({ queryKey: ["workers", "stats"], queryFn: () => fetchList() });
+  const { data: workers = [] } = useQuery({
+    queryKey: ["workers", "stats"],
+    queryFn: () => fetchList(),
+  });
   const [q, setQ] = useState("");
   const [filterTab, setFilterTab] = useState<"all" | "available" | "assigned" | "inactive">("all");
 
@@ -45,7 +61,12 @@ function WorkersPage() {
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Search workers" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Input
+            className="pl-9"
+            placeholder="Search workers"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
         </div>
         <AddWorkerDialog />
       </div>
@@ -71,12 +92,15 @@ function WorkersPage() {
 
       <Card className="divide-y">
         {filtered.length === 0 && (
-          <p className="p-6 text-sm text-muted-foreground text-center">No workers yet. Add your first worker.</p>
+          <p className="p-6 text-sm text-muted-foreground text-center">
+            No workers yet. Add your first worker.
+          </p>
         )}
         {filtered.map((w: any) => {
           const isInactive = w.status === "inactive";
           const isAssigned = !isInactive && w.assignedProjects && w.assignedProjects.length > 0;
-          const isAvailable = !isInactive && (!w.assignedProjects || w.assignedProjects.length === 0);
+          const isAvailable =
+            !isInactive && (!w.assignedProjects || w.assignedProjects.length === 0);
 
           const statusIndicator = isInactive ? (
             <span className="inline-flex items-center gap-1 text-[10px] font-medium text-destructive bg-destructive/10 px-2 py-0.5 rounded-full shrink-0">
@@ -114,21 +138,36 @@ function WorkersPage() {
                     {w.assignedProjects?.length > 0 ? (
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {w.assignedProjects.map((p: string) => (
-                          <Badge key={p} variant="outline" className="text-[10px] font-medium bg-primary/5 border-primary/20 text-primary">
+                          <Badge
+                            key={p}
+                            variant="outline"
+                            className="text-[10px] font-medium bg-primary/5 border-primary/20 text-primary"
+                          >
                             📍 {p}
                           </Badge>
                         ))}
                       </div>
                     ) : (
                       <div className="mt-1.5">
-                        <Badge variant="secondary" className="text-[10px] font-medium text-muted-foreground border-dashed">
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] font-medium text-muted-foreground border-dashed"
+                        >
                           No site assigned
                         </Badge>
                       </div>
                     )}
                     <div className="flex gap-4 mt-2.5 text-xs text-muted-foreground tabular-nums">
-                      <span><span className="text-foreground font-medium">{w.monthDays}</span> Days Worked</span>
-                      <span><span className="text-foreground font-medium">{formatCurrency(w.monthEarnings)}</span> Earned</span>
+                      <span>
+                        <span className="text-foreground font-medium">{w.monthDays}</span> Days
+                        Worked
+                      </span>
+                      <span>
+                        <span className="text-foreground font-medium">
+                          {formatCurrency(w.monthEarnings)}
+                        </span>{" "}
+                        Earned
+                      </span>
                     </div>
                   </div>
                   <ChevronRight className="size-4 text-muted-foreground mt-1 shrink-0" />
@@ -142,7 +181,11 @@ function WorkersPage() {
                     className="h-8 w-8 rounded-full hover:bg-accent text-primary shrink-0"
                     asChild
                   >
-                    <a href={`tel:${w.mobile}`} aria-label={`Call ${w.full_name}`} onClick={(e) => e.stopPropagation()}>
+                    <a
+                      href={`tel:${w.mobile}`}
+                      aria-label={`Call ${w.full_name}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Phone className="size-4" />
                     </a>
                   </Button>
@@ -175,10 +218,14 @@ function AddWorkerDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="tap-target"><Plus className="size-4" /> Add</Button>
+        <Button className="tap-target">
+          <Plus className="size-4" /> Add
+        </Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Add worker</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Add worker</DialogTitle>
+        </DialogHeader>
         <form
           className="space-y-3"
           onSubmit={(e) => {
@@ -216,7 +263,12 @@ function AddWorkerDialog() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="joining_date">Joining date</Label>
-              <Input id="joining_date" name="joining_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
+              <Input
+                id="joining_date"
+                name="joining_date"
+                type="date"
+                defaultValue={new Date().toISOString().slice(0, 10)}
+              />
             </div>
           </div>
           <div className="space-y-1.5">
@@ -226,7 +278,9 @@ function AddWorkerDialog() {
           <div className="space-y-1.5">
             <Label>Status</Label>
             <Select name="status" defaultValue="active">
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
@@ -234,7 +288,9 @@ function AddWorkerDialog() {
             </Select>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={m.isPending}>{m.isPending ? "Saving…" : "Add worker"}</Button>
+            <Button type="submit" disabled={m.isPending}>
+              {m.isPending ? "Saving…" : "Add worker"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

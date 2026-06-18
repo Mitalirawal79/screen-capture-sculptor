@@ -1,6 +1,20 @@
-import { createFileRoute, Outlet, redirect, Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  redirect,
+  Link,
+  useRouterState,
+  useNavigate,
+} from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, CalendarCheck2, Users, HardHat, FileSpreadsheet, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  CalendarCheck2,
+  Users,
+  HardHat,
+  FileSpreadsheet,
+  LogOut,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -34,7 +48,9 @@ function AppLayout() {
     navigate({ to: "/auth", replace: true });
   }
 
-  const title = NAV.find((n) => (n.to === "/" ? pathname === "/" : pathname.startsWith(n.to)))?.label ?? "SiteCrew";
+  const title =
+    NAV.find((n) => (n.to === "/" ? pathname === "/" : pathname.startsWith(n.to)))?.label ??
+    "SiteCrew";
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -45,7 +61,9 @@ function AppLayout() {
               <HardHat className="size-4" />
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground leading-none">SiteCrew</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground leading-none">
+                SiteCrew
+              </p>
               <h1 className="text-sm font-semibold leading-tight">{title}</h1>
             </div>
           </div>

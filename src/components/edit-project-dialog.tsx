@@ -7,9 +7,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Pencil, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { updateProject } from "@/lib/projects.functions";
@@ -24,7 +35,11 @@ export function EditProjectButton({ project }: { project: any }) {
         size="icon"
         aria-label="Edit project"
         className="h-8 w-8 rounded-full hover:bg-accent"
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(true); }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen(true);
+        }}
       >
         <Pencil className="size-4" />
       </Button>
@@ -33,7 +48,15 @@ export function EditProjectButton({ project }: { project: any }) {
   );
 }
 
-function EditProjectDialog({ project, open, onOpenChange }: { project: any; open: boolean; onOpenChange: (v: boolean) => void }) {
+function EditProjectDialog({
+  project,
+  open,
+  onOpenChange,
+}: {
+  project: any;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const qc = useQueryClient();
   const fn = useServerFn(updateProject);
   const [progress, setProgress] = useState<number>(project.progress_pct ?? 0);
@@ -102,23 +125,44 @@ function EditProjectDialog({ project, open, onOpenChange }: { project: any; open
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="ep_start">Start date</Label>
-              <Input id="ep_start" name="start_date" type="date" defaultValue={project.start_date ?? ""} />
+              <Input
+                id="ep_start"
+                name="start_date"
+                type="date"
+                defaultValue={project.start_date ?? ""}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ep_end">Expected end</Label>
-              <Input id="ep_end" name="expected_end" type="date" defaultValue={project.expected_end ?? ""} />
+              <Input
+                id="ep_end"
+                name="expected_end"
+                type="date"
+                defaultValue={project.expected_end ?? ""}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="ep_value">Contract value</Label>
-              <Input id="ep_value" name="contract_value" type="number" min="0" step="1" defaultValue={project.contract_value ?? 0} />
-              {errors.contract_value && <p className="text-xs text-destructive">{errors.contract_value}</p>}
+              <Input
+                id="ep_value"
+                name="contract_value"
+                type="number"
+                min="0"
+                step="1"
+                defaultValue={project.contract_value ?? 0}
+              />
+              {errors.contract_value && (
+                <p className="text-xs text-destructive">{errors.contract_value}</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Status</Label>
               <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="planning">Planning</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
@@ -133,14 +177,31 @@ function EditProjectDialog({ project, open, onOpenChange }: { project: any; open
               <Label>Progress</Label>
               <span className="text-sm tabular-nums text-muted-foreground">{progress}%</span>
             </div>
-            <Slider value={[progress]} min={0} max={100} step={5} onValueChange={(v) => setProgress(v[0])} />
+            <Slider
+              value={[progress]}
+              min={0}
+              max={100}
+              step={5}
+              onValueChange={(v) => setProgress(v[0])}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="ep_notes">Notes</Label>
-            <Textarea id="ep_notes" name="notes" rows={3} placeholder="Internal notes about this project…" defaultValue={project.notes ?? ""} />
+            <Textarea
+              id="ep_notes"
+              name="notes"
+              rows={3}
+              placeholder="Internal notes about this project…"
+              defaultValue={project.notes ?? ""}
+            />
           </div>
           <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={m.isPending}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={m.isPending}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={m.isPending}>

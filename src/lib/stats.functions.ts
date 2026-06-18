@@ -1,7 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { wageFor, type AttendanceType } from "./wages";
+import {
+  wageFor,
+  type AttendanceType,
+  getDayFromDateString,
+  calculateGroupedEarnings,
+} from "./wages";
 
 function monthBounds(d = new Date()) {
   const from = new Date(d.getFullYear(), d.getMonth(), 1);
@@ -29,7 +34,11 @@ export const getDashboardOverview = createServerFn({ method: "GET" })
       sb.from("workers").select("id, full_name, daily_wage, status"),
       sb.from("projects").select("id, name, status, location, progress_pct"),
       sb.from("attendance").select("worker_id, type, project_id").eq("date", today),
-      sb.from("attendance").select("worker_id, type, date, project_id").gte("date", from).lte("date", to),
+      sb
+        .from("attendance")
+        .select("worker_id, type, date, project_id")
+        .gte("date", from)
+        .lte("date", to),
       sb.from("project_workers").select("project_id, worker_id"),
     ]);
     for (const r of [workersRes, projectsRes, todayAttRes, monthAttRes, assignsRes]) {
@@ -45,23 +54,43 @@ export const getDashboardOverview = createServerFn({ method: "GET" })
 
     // Monthly cost per worker (overall + per project)
     const monthAtt = monthAttRes.data ?? [];
-    let monthLabourCost = 0;
-    const costPerProject = new Map<string, number>();
-    const earningsPerWorker = new Map<string, number>();
     const presentDaysPerWorker = new Map<string, number>();
     const attendancePerProject = new Map<string, number>();
+
+    // Nested map: worker_id -> project_id -> unrounded earnings
+    const workerProjUnrounded = new Map<string, Map<string, number>>();
+
     for (const a of monthAtt) {
-      const w = wageMap.get(a.worker_id) ?? 0;
-      const e = wageFor(a.type as AttendanceType, w);
-      monthLabourCost += e;
-      earningsPerWorker.set(a.worker_id, (earningsPerWorker.get(a.worker_id) ?? 0) + e);
       if (a.type !== "absent") {
         presentDaysPerWorker.set(a.worker_id, (presentDaysPerWorker.get(a.worker_id) ?? 0) + 1);
       }
       if (a.project_id) {
-        costPerProject.set(a.project_id, (costPerProject.get(a.project_id) ?? 0) + e);
         attendancePerProject.set(a.project_id, (attendancePerProject.get(a.project_id) ?? 0) + 1);
+
+        if (!workerProjUnrounded.has(a.worker_id)) {
+          workerProjUnrounded.set(a.worker_id, new Map());
+        }
+        const projMap = workerProjUnrounded.get(a.worker_id)!;
+        const w = wageMap.get(a.worker_id) ?? 0;
+        const e = wageFor(a.type as AttendanceType, w);
+        projMap.set(a.project_id, (projMap.get(a.project_id) ?? 0) + e);
       }
+    }
+
+    // Now, calculate the rounded earnings per worker and cost per project
+    let monthLabourCost = 0;
+    const costPerProject = new Map<string, number>();
+    const earningsPerWorker = new Map<string, number>();
+
+    for (const [workerId, projMap] of workerProjUnrounded.entries()) {
+      let workerTotal = 0;
+      for (const [projectId, unroundedCost] of projMap.entries()) {
+        const roundedCost = Math.round(unroundedCost);
+        costPerProject.set(projectId, (costPerProject.get(projectId) ?? 0) + roundedCost);
+        workerTotal += roundedCost;
+        monthLabourCost += roundedCost;
+      }
+      earningsPerWorker.set(workerId, workerTotal);
     }
 
     // Site status per active project
@@ -81,7 +110,7 @@ export const getDashboardOverview = createServerFn({ method: "GET" })
       location: p.location,
       assigned: assignsByProject.get(p.id)?.size ?? 0,
       presentToday: presentByProject.get(p.id) ?? 0,
-      monthCost: Math.round(costPerProject.get(p.id) ?? 0),
+      monthCost: costPerProject.get(p.id) ?? 0,
     }));
 
     // Insights
@@ -101,13 +130,21 @@ export const getDashboardOverview = createServerFn({ method: "GET" })
       totalProjects: projects.length,
       totalWorkers,
       presentToday,
-      monthLabourCost: Math.round(monthLabourCost),
+      monthLabourCost,
       sites,
       insights: {
-        topProject: topProject ? { name: projName.get(topProject[0]) ?? "—", value: Math.round(topProject[1]) } : null,
-        mostActiveProject: mostActive ? { name: projName.get(mostActive[0]) ?? "—", days: mostActive[1] } : null,
-        topWorker: topWorker ? { name: workerName.get(topWorker[0]) ?? "—", value: Math.round(topWorker[1]) } : null,
-        lowestWorker: lowestWorker ? { name: workerName.get(lowestWorker.id) ?? "—", days: lowestWorker.n } : null,
+        topProject: topProject
+          ? { name: projName.get(topProject[0]) ?? "—", value: topProject[1] }
+          : null,
+        mostActiveProject: mostActive
+          ? { name: projName.get(mostActive[0]) ?? "—", days: mostActive[1] }
+          : null,
+        topWorker: topWorker
+          ? { name: workerName.get(topWorker[0]) ?? "—", value: topWorker[1] }
+          : null,
+        lowestWorker: lowestWorker
+          ? { name: workerName.get(lowestWorker.id) ?? "—", days: lowestWorker.n }
+          : null,
       },
     };
   });
@@ -124,7 +161,11 @@ export const listProjectsWithStats = createServerFn({ method: "GET" })
       sb.from("projects").select("*").order("created_at", { ascending: false }),
       sb.from("workers").select("id, daily_wage"),
       sb.from("project_workers").select("project_id, worker_id"),
-      sb.from("attendance").select("worker_id, type, project_id, date").gte("date", from).lte("date", to),
+      sb
+        .from("attendance")
+        .select("worker_id, type, project_id, date")
+        .gte("date", from)
+        .lte("date", to),
     ]);
     for (const r of [projRes, workersRes, assignRes, attRes]) {
       if ((r as any).error) throw new Error((r as any).error.message);
@@ -134,40 +175,59 @@ export const listProjectsWithStats = createServerFn({ method: "GET" })
     for (const a of assignRes.data ?? []) {
       assignedCount.set(a.project_id, (assignedCount.get(a.project_id) ?? 0) + 1);
     }
-    const costByProject = new Map<string, number>();
+    const workerProjUnrounded = new Map<string, Map<string, number>>();
     const presentTodayByProject = new Map<string, number>();
     for (const a of attRes.data ?? []) {
       if (!a.project_id) continue;
-      const e = wageFor(a.type as AttendanceType, wageMap.get(a.worker_id) ?? 0);
-      costByProject.set(a.project_id, (costByProject.get(a.project_id) ?? 0) + e);
+
+      if (!workerProjUnrounded.has(a.worker_id)) {
+        workerProjUnrounded.set(a.worker_id, new Map());
+      }
+      const projMap = workerProjUnrounded.get(a.worker_id)!;
+      const w = wageMap.get(a.worker_id) ?? 0;
+      const e = wageFor(a.type as AttendanceType, w);
+      projMap.set(a.project_id, (projMap.get(a.project_id) ?? 0) + e);
+
       if (a.date === today && a.type !== "absent") {
         presentTodayByProject.set(a.project_id, (presentTodayByProject.get(a.project_id) ?? 0) + 1);
       }
     }
+
+    const costByProject = new Map<string, number>();
+    for (const [workerId, projMap] of workerProjUnrounded.entries()) {
+      for (const [projectId, unroundedCost] of projMap.entries()) {
+        const roundedCost = Math.round(unroundedCost);
+        costByProject.set(projectId, (costByProject.get(projectId) ?? 0) + roundedCost);
+      }
+    }
+
     return (projRes.data ?? []).map((p) => ({
       ...p,
       assignedCount: assignedCount.get(p.id) ?? 0,
-      monthCost: Math.round(costByProject.get(p.id) ?? 0),
+      monthCost: costByProject.get(p.id) ?? 0,
       presentToday: presentTodayByProject.get(p.id) ?? 0,
     }));
   });
 
 export const getProjectStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const sb = context.supabase;
     const { from, to } = monthBounds();
     const today = new Date().toISOString().slice(0, 10);
 
     const [assignRes, attRes, workersRes] = await Promise.all([
-      sb.from("project_workers")
+      sb
+        .from("project_workers")
         .select("worker_id, workers(id, full_name, worker_type, daily_wage)")
         .eq("project_id", data.id),
-      sb.from("attendance")
-        .select("worker_id, type, date")
+      sb
+        .from("attendance")
+        .select("worker_id, type, date, project_id")
         .eq("project_id", data.id)
-        .gte("date", from).lte("date", to),
+        .gte("date", from)
+        .lte("date", to),
       sb.from("workers").select("id, full_name, worker_type, daily_wage"),
     ]);
     for (const r of [assignRes, attRes, workersRes]) {
@@ -185,19 +245,33 @@ export const getProjectStats = createServerFn({ method: "GET" })
     for (const a of assigns as any[]) if (a.worker_id) workerIds.add(a.worker_id);
     for (const a of att) if (a.worker_id) workerIds.add(a.worker_id);
 
+    // Pre-group project attendance by worker_id
+    const attByWorker = new Map<string, typeof att>();
+    for (const a of att) {
+      if (!attByWorker.has(a.worker_id)) {
+        attByWorker.set(a.worker_id, []);
+      }
+      attByWorker.get(a.worker_id)!.push(a);
+    }
+
     const breakdown = [...workerIds].map((wid) => {
       const w: any = workerMap.get(wid) ?? {};
       const wage = Number(w.daily_wage ?? 0);
-      const wAtt = att.filter((x) => x.worker_id === wid);
-      const days = wAtt.filter((x) => x.type !== "absent").length;
-      const earnings = wAtt.reduce((s, x) => s + wageFor(x.type as AttendanceType, wage), 0);
+      const wAtt = attByWorker.get(wid) ?? [];
+
+      let days = 0;
+      for (const x of wAtt) {
+        if (x.type !== "absent") days++;
+      }
+      const earnings = calculateGroupedEarnings(wAtt, wage);
+
       return {
         worker_id: wid,
         name: w.full_name ?? "—",
         type: w.worker_type ?? "",
         wage,
         days,
-        earnings: Math.round(earnings),
+        earnings,
       };
     });
     const monthCost = breakdown.reduce((s, r) => s + r.earnings, 0);
@@ -205,11 +279,10 @@ export const getProjectStats = createServerFn({ method: "GET" })
       assignedCount: assigns.length,
       presentToday,
       absentToday,
-      monthCost: Math.round(monthCost),
+      monthCost,
       breakdown: breakdown.sort((a, b) => b.earnings - a.earnings),
     };
   });
-
 
 /* --------------------------------- WORKERS --------------------------------- */
 export const listWorkersWithStats = createServerFn({ method: "GET" })
@@ -221,7 +294,11 @@ export const listWorkersWithStats = createServerFn({ method: "GET" })
     const [workersRes, assignRes, attRes] = await Promise.all([
       sb.from("workers").select("*").order("full_name"),
       sb.from("project_workers").select("worker_id, project_id, projects(name)"),
-      sb.from("attendance").select("worker_id, type").gte("date", from).lte("date", to),
+      sb
+        .from("attendance")
+        .select("worker_id, type, date, project_id")
+        .gte("date", from)
+        .lte("date", to),
     ]);
     for (const r of [workersRes, assignRes, attRes]) {
       if ((r as any).error) throw new Error((r as any).error.message);
@@ -233,7 +310,7 @@ export const listWorkersWithStats = createServerFn({ method: "GET" })
       if (!projectsByWorker.has(a.worker_id)) projectsByWorker.set(a.worker_id, []);
       projectsByWorker.get(a.worker_id)!.push(name);
     }
-    const attByWorker = new Map<string, { type: string }[]>();
+    const attByWorker = new Map<string, typeof attRes.data>();
     for (const a of attRes.data ?? []) {
       if (!attByWorker.has(a.worker_id)) attByWorker.set(a.worker_id, []);
       attByWorker.get(a.worker_id)!.push(a);
@@ -241,25 +318,30 @@ export const listWorkersWithStats = createServerFn({ method: "GET" })
     return (workersRes.data ?? []).map((w) => {
       const wage = Number(w.daily_wage);
       const wAtt = attByWorker.get(w.id) ?? [];
-      const days = wAtt.filter((a) => a.type !== "absent").length;
-      const earnings = wAtt.reduce((s, a) => s + wageFor(a.type as AttendanceType, wage), 0);
+      let days = 0;
+      for (const a of wAtt) {
+        if (a.type !== "absent") days++;
+      }
+      const earnings = calculateGroupedEarnings(wAtt, wage);
       return {
         ...w,
         assignedProjects: projectsByWorker.get(w.id) ?? [],
         monthDays: days,
-        monthEarnings: Math.round(earnings),
+        monthEarnings: earnings,
       };
     });
   });
 
 export const getWorkerDetailStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { worker_id: string; year?: number; month?: number }) =>
-    z.object({
-      worker_id: z.string().uuid(),
-      year: z.number().int().optional(),
-      month: z.number().int().min(1).max(12).optional(),
-    }).parse(d),
+  .validator((d: { worker_id: string; year?: number; month?: number }) =>
+    z
+      .object({
+        worker_id: z.string().uuid(),
+        year: z.number().int().optional(),
+        month: z.number().int().min(1).max(12).optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ context, data }) => {
     const sb = context.supabase;
@@ -270,10 +352,24 @@ export const getWorkerDetailStats = createServerFn({ method: "GET" })
 
     const [wRes, attRes, payRes, assignRes, lifetimeAttRes, lifetimePayRes] = await Promise.all([
       sb.from("workers").select("*").eq("id", data.worker_id).maybeSingle(),
-      sb.from("attendance").select("type, date, project_id, work_area, projects(name)").eq("worker_id", data.worker_id).gte("date", from).lte("date", to).order("date", { ascending: false }),
-      sb.from("payments").select("amount, paid_on, note").eq("worker_id", data.worker_id).gte("paid_on", from).lte("paid_on", to),
-      sb.from("project_workers").select("project_id, assigned_at, projects(id, name)").eq("worker_id", data.worker_id),
-      sb.from("attendance").select("type").eq("worker_id", data.worker_id),
+      sb
+        .from("attendance")
+        .select("type, date, project_id, work_area, projects(name)")
+        .eq("worker_id", data.worker_id)
+        .gte("date", from)
+        .lte("date", to)
+        .order("date", { ascending: false }),
+      sb
+        .from("payments")
+        .select("amount, paid_on, note")
+        .eq("worker_id", data.worker_id)
+        .gte("paid_on", from)
+        .lte("paid_on", to),
+      sb
+        .from("project_workers")
+        .select("project_id, assigned_at, projects(id, name)")
+        .eq("worker_id", data.worker_id),
+      sb.from("attendance").select("type, date, project_id").eq("worker_id", data.worker_id),
       sb.from("payments").select("amount").eq("worker_id", data.worker_id),
     ]);
     for (const r of [wRes, attRes, payRes, assignRes, lifetimeAttRes, lifetimePayRes]) {
@@ -290,12 +386,10 @@ export const getWorkerDetailStats = createServerFn({ method: "GET" })
       absent: att.filter((a) => a.type === "absent").length,
     };
     const presentDays = counts.full + counts.half + counts.overtime;
-    const earnings = att.reduce((s, a) => s + wageFor(a.type as AttendanceType, wage), 0);
+    const earnings = calculateGroupedEarnings(att, wage);
     const paid = (payRes.data ?? []).reduce((s, p) => s + Number(p.amount), 0);
 
-    const lifetimeEarnings = (lifetimeAttRes.data ?? []).reduce(
-      (s, a) => s + wageFor(a.type as AttendanceType, wage), 0,
-    );
+    const lifetimeEarnings = calculateGroupedEarnings(lifetimeAttRes.data ?? [], wage);
     const lifetimePaid = (lifetimePayRes.data ?? []).reduce((s, p) => s + Number(p.amount), 0);
 
     return {
@@ -305,10 +399,10 @@ export const getWorkerDetailStats = createServerFn({ method: "GET" })
       timeline: att as any[],
       counts,
       presentDays,
-      monthEarnings: Math.round(earnings),
+      monthEarnings: earnings,
       monthPaid: Math.round(paid),
       monthPending: Math.round(earnings - paid),
-      lifetimeEarnings: Math.round(lifetimeEarnings),
+      lifetimeEarnings,
       lifetimePaid: Math.round(lifetimePaid),
       lifetimeBalance: Math.round(lifetimeEarnings - lifetimePaid),
     };
@@ -317,18 +411,20 @@ export const getWorkerDetailStats = createServerFn({ method: "GET" })
 /* --------------------------------- ATTENDANCE --------------------------------- */
 export const getProjectAssignedWorkers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { project_id: string; date?: string }) =>
+  .validator((d: { project_id: string; date?: string }) =>
     z.object({ project_id: z.string().uuid(), date: z.string().min(8).optional() }).parse(d),
   )
   .handler(async ({ context, data }) => {
     const sb = context.supabase;
     // Default team (project_workers) + anyone with attendance on the given date for this project.
     const [teamRes, dayAttRes] = await Promise.all([
-      sb.from("project_workers")
+      sb
+        .from("project_workers")
         .select("worker_id, workers(id, full_name, worker_type, daily_wage, status)")
         .eq("project_id", data.project_id),
       data.date
-        ? sb.from("attendance")
+        ? sb
+            .from("attendance")
             .select("worker_id, workers(id, full_name, worker_type, daily_wage, status)")
             .eq("project_id", data.project_id)
             .eq("date", data.date)
@@ -337,22 +433,30 @@ export const getProjectAssignedWorkers = createServerFn({ method: "GET" })
     if ((teamRes as any).error) throw new Error((teamRes as any).error.message);
     if ((dayAttRes as any).error) throw new Error((dayAttRes as any).error.message);
 
+    const dayAtt = dayAttRes.data ?? [];
     const byId = new Map<string, any>();
-    for (const r of (teamRes.data ?? []) as any[]) {
-      if (r.workers && r.workers.status === "active") byId.set(r.workers.id, r.workers);
-    }
-    for (const r of (dayAttRes.data ?? []) as any[]) {
-      if (r.workers && r.workers.status === "active" && !byId.has(r.workers.id)) {
-        byId.set(r.workers.id, r.workers);
+
+    if (dayAtt.length > 0) {
+      // If there are attendance records, they are the source of truth for the daily workforce
+      for (const r of dayAtt) {
+        if (r.workers && r.workers.status === "active") {
+          byId.set(r.workers.id, r.workers);
+        }
+      }
+    } else {
+      // Otherwise preload the default team
+      for (const r of (teamRes.data ?? []) as any[]) {
+        if (r.workers && r.workers.status === "active") {
+          byId.set(r.workers.id, r.workers);
+        }
       }
     }
     return [...byId.values()].sort((a: any, b: any) => a.full_name.localeCompare(b.full_name));
   });
 
-
 export const getAttendanceForProjectDay = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { project_id: string; date: string }) =>
+  .validator((d: { project_id: string; date: string }) =>
     z.object({ project_id: z.string().uuid(), date: z.string().min(8) }).parse(d),
   )
   .handler(async ({ context, data }) => {
@@ -368,27 +472,36 @@ export const getAttendanceForProjectDay = createServerFn({ method: "GET" })
 /* --------------------------------- REPORTS (calendar matrix) --------------------------------- */
 export const getAttendanceMatrix = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { year: number; month: number; project_id?: string | null }) =>
-    z.object({
-      year: z.number().int(),
-      month: z.number().int().min(1).max(12),
-      project_id: z.string().uuid().optional().nullable(),
-    }).parse(d),
+  .validator((d: { year: number; month: number; project_id?: string | null }) =>
+    z
+      .object({
+        year: z.number().int(),
+        month: z.number().int().min(1).max(12),
+        project_id: z.string().uuid().optional().nullable(),
+      })
+      .parse(d),
   )
   .handler(async ({ context, data }) => {
     const sb = context.supabase;
     const { from, to } = boundsFor(data.year, data.month);
-    const days = Number(to.slice(-2));
+    const days = getDayFromDateString(to);
 
     let workersQ = sb.from("workers").select("id, full_name, daily_wage").order("full_name");
     if (data.project_id) {
-      const { data: pw } = await sb.from("project_workers").select("worker_id").eq("project_id", data.project_id);
+      const { data: pw } = await sb
+        .from("project_workers")
+        .select("worker_id")
+        .eq("project_id", data.project_id);
       const ids = (pw ?? []).map((x) => x.worker_id);
       if (ids.length === 0) return { days, workers: [], rows: [] };
       workersQ = workersQ.in("id", ids);
     }
 
-    let attQ = sb.from("attendance").select("worker_id, date, type").gte("date", from).lte("date", to);
+    let attQ = sb
+      .from("attendance")
+      .select("worker_id, date, type")
+      .gte("date", from)
+      .lte("date", to);
     if (data.project_id) attQ = attQ.eq("project_id", data.project_id);
 
     const [workersRes, attRes] = await Promise.all([workersQ, attQ]);
@@ -397,7 +510,7 @@ export const getAttendanceMatrix = createServerFn({ method: "GET" })
 
     const attMap = new Map<string, Map<number, string>>();
     for (const a of attRes.data ?? []) {
-      const d = Number(a.date.slice(-2));
+      const d = getDayFromDateString(a.date);
       if (!attMap.has(a.worker_id)) attMap.set(a.worker_id, new Map());
       attMap.get(a.worker_id)!.set(d, a.type);
     }
